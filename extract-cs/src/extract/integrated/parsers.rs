@@ -14,7 +14,7 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     config::{SingleState, SingleTransition, Units},
-    prep::{ExtractResultsError, TransitionsSet},
+    extract::{ExtractResultsError, TransitionsSet},
     results::SingleEnergyResults,
     util::ColumnSlice,
 };

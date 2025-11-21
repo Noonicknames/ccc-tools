@@ -15,7 +15,7 @@ use tokio_stream::wrappers::ReadDirStream;
 
 use crate::{
     config::{PartialColumn, Units},
-    prep::{
+    extract::{
         partial::parsers::{ParseCs, ParseEnergy, ParseIonCs, ParseUnits, PartialCsContext},
         CsResults, TransitionsSet,
     }, util::FilesSource,

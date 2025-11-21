@@ -6,7 +6,7 @@ use diagnostics::{
     error, LogFmtOptions,
 };
 use new::{cmd_new, NewCmdError};
-use prep::{cmd_prep, PrepCmdError};
+use extract::{cmd_extract, ExtractCmdError};
 
 use crate::cli::{cmd_cli, CliCmdError};
 
@@ -18,7 +18,7 @@ pub mod util;
 
 pub mod cli;
 pub mod new;
-pub mod prep;
+pub mod extract;
 
 /// Program to extract plotting data to prepare for plotting.
 #[derive(clap::Parser)]
@@ -31,18 +31,18 @@ pub struct Cli {
 #[derive(Clone, clap::Subcommand)]
 pub enum Commands {
     /// Prepare results according to a config file.
-    Prep {
+    Extract {
         /// Path to read in configuration.
-        #[arg(short, long, default_value = "prep-plot.ron")]
+        #[arg(short, long, default_value = "extract-cs.ron")]
         path: String,
     },
     /// Writes an example prep-plot file.
     ///
-    /// By default writes to './prep-plot.ron'.
+    /// By default writes to './extract-cs.ron'.
     /// The file or directory may be specified with --path.
     New {
         /// Path to write template config file to.
-        #[arg(long, default_value = "prep-plot.ron")]
+        #[arg(long, default_value = "extract-cs.ron")]
         path: String,
         /// Get an example for extracting total waves.
         #[arg(long)]
@@ -75,7 +75,7 @@ pub enum AppError {
     #[error(transparent)]
     New(#[from] NewCmdError),
     #[error(transparent)]
-    Prep(#[from] PrepCmdError),
+    Prep(#[from] ExtractCmdError),
     #[error(transparent)]
     Cli(#[from] CliCmdError),
     #[error("Failed to build tokio runtime.\n{err}")]
@@ -104,8 +104,8 @@ pub async fn async_run() -> Result<(), AppError> {
     };
 
     let result = match command {
-        Commands::Prep { path } => {
-            if let Err(err) = cmd_prep(&path, &diagnostics).await {
+        Commands::Extract { path } => {
+            if let Err(err) = cmd_extract(&path, &diagnostics).await {
                 diagnostics.write_log_background(err.to_log());
                 Err(err.into())
             } else {

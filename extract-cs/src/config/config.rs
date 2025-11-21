@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, sync::Arc};
 
-use crate::{config::Transition, prep::TransitionsSet, util::FilesSource};
+use crate::{config::Transition, extract::TransitionsSet, util::FilesSource};
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ConfigSerde {

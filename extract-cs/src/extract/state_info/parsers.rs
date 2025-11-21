@@ -15,7 +15,7 @@ use state_parse::r#async::AsyncSectionParser;
 
 use crate::{
     config::SingleState,
-    prep::state_info::{ExtractStateInfoError, StateInfo},
+    extract::state_info::{ExtractStateInfoError, StateInfo},
 };
 
 pub struct StateInfoContext {

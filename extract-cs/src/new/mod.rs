@@ -39,7 +39,6 @@ pub async fn cmd_new(
         if !force {
             match open_options.open(&path).await {
                 Ok(file) => {
-                    diagnostics.write_log_background(info!("`{}` already exists", path));
                     break 'file file;
                 }
                 Err(err) => {

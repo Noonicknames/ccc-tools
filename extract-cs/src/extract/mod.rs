@@ -21,7 +21,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::{
     bench_time,
     config::{Config, ConfigSerde, CsKind, ResultSet, SingleState, SingleTransition, State, Transition, Units},
-    prep::{
+    extract::{
         integrated::get_integrated_results,
         partial::get_partial_results,
         state_info::{ExtractStateInfoError, get_state_info},
@@ -35,7 +35,7 @@ mod partial;
 mod state_info;
 
 #[derive(Debug, thiserror::Error)]
-pub enum PrepCmdError {
+pub enum ExtractCmdError {
     #[error("Failed to open config file '{file_path}': {err}")]
     OpenConfig {
         file_path: String,
@@ -57,7 +57,7 @@ pub enum PrepCmdError {
     PrepareFoldersError(#[from] PrepareFoldersError),
 }
 
-impl PrepCmdError {
+impl ExtractCmdError {
     pub fn to_log(&self) -> Log {
         match self {
             Self::ConfigParse {
@@ -84,11 +84,11 @@ impl PrepCmdError {
     }
 }
 
-/// Run upon calling the 'prep' subcommand.
-pub async fn cmd_prep(
+/// Run upon calling the 'extract' subcommand.
+pub async fn cmd_extract(
     file_path: &str,
     diagnostics: &Arc<AsyncDiagnostics>,
-) -> Result<(), PrepCmdError> {
+) -> Result<(), ExtractCmdError> {
     let config = get_config(file_path).await?;
 
     let root_dir = PathBuf::from(file_path).parent().unwrap().to_owned();
@@ -98,13 +98,13 @@ pub async fn cmd_prep(
     Ok(())
 }
 
-async fn get_config(file_path: impl AsRef<Path>) -> Result<Config, PrepCmdError> {
+async fn get_config(file_path: impl AsRef<Path>) -> Result<Config, ExtractCmdError> {
     {
         let mut open_options = tokio::fs::OpenOptions::new();
         open_options.read(true);
 
         let mut file = open_options.open(file_path.as_ref()).await.map_err(|err| {
-            PrepCmdError::OpenConfig {
+            ExtractCmdError::OpenConfig {
                 file_path: file_path.as_ref().display().to_string(),
                 err,
             }
@@ -113,7 +113,7 @@ async fn get_config(file_path: impl AsRef<Path>) -> Result<Config, PrepCmdError>
         let mut buf = String::new();
         file.read_to_string(&mut buf)
             .await
-            .map_err(|err| PrepCmdError::ConfigInvalidUtf8 {
+            .map_err(|err| ExtractCmdError::ConfigInvalidUtf8 {
                 file_path: file_path.as_ref().display().to_string(),
                 err,
             })?;
@@ -131,7 +131,7 @@ async fn get_config(file_path: impl AsRef<Path>) -> Result<Config, PrepCmdError>
                     lines.push('\n');
                 }
             }
-            PrepCmdError::ConfigParse {
+            ExtractCmdError::ConfigParse {
                 file_path: file_path.as_ref().display().to_string(),
                 start_line,
                 lines,
