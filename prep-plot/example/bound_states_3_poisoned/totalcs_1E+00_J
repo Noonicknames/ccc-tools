@@ -1,0 +1,11 @@
+   0   1   1 Units: cm^2     electron - B II  
+ 1.00000E+00 eV on s2S
+
+1.0000E+00eV on s2S J =  0  sum, opt, rat. TCS(0,0):  2.927E-16 2.927E-16 1.0000
+1.0000E+00eV on s2S for partial wave J =  0 TICS(0,0):   0.000E+00
+1.0000E+00eV on s2S for partial wave J =  0   TNBCS(0,0):   2.927E-16
+1.0000E+00eV on s2S for partial wave J =  0 PsTNBCS(0,0):   0.000E+00
+1.0000E+00eV on s2S for partial wave J =  0 PsTICS(0,0):   0.000E+00
+1.0000E+00eV on s2S for J =  0 eigenphase sum and Rcond(0,0): -2.498E-01  0.000E+00
+  0  1.000E+00eV on s2S TNBCS,+extra, spin asymmetry:  2.927E-16  2.947E-16  1.000E+00
+  0 1.000E+00eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00

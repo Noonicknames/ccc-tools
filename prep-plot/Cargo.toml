@@ -1,0 +1,32 @@
+[package]
+name = "prep-plot"
+version = "0.1.2"
+edition = "2021"
+rust-version = "1.85"
+
+[dependencies]
+diagnostics = { workspace = true, features = ["tokio"] }
+state-parse = { workspace = true, features = ["tokio"] }
+
+arrayvec = { workspace = false, default-features = false }
+clap = { workspace = true, features = ["derive"] }
+colored = { workspace = true }
+ron = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = [
+    "fs",
+    "io-std",
+    "io-util",
+    "macros",
+    "rt-multi-thread",
+    "sync",
+] }
+unicode-width = { workspace = true }
+tokio-stream = { workspace = true, features = ["fs"]}
+futures = { workspace = true, default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+strip = true

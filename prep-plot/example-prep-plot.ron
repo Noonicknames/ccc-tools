@@ -1,0 +1,23 @@
+// Example prep-plot.ron file
+(
+    result_sets: [
+        (
+            name: "under-40eV", // Name of result set.
+            source: Folder("./under_40eV_states"), // Currently only supports Folder(...)
+        ),
+    ],
+    // // Total cross-section values.
+    // cs_kind: Total,
+    // Partial cross-section values.
+    cs_kind: Partial(
+        partial_wave: 1,
+        column: T0, // Possible values: CrossSection, Extrapolated, T0, T1, V, 
+    ),
+    transitions: [
+        "s2P<-s2S",
+        "s3S<-s2S",
+    ],
+    output_folder: "./default-prep-plot",
+    overwrite: false,
+    units: Atomic,
+)

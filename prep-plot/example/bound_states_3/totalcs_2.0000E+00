@@ -1,0 +1,29 @@
+  20   1   1 Units: cm^2     electron - B II    2.0000E+00 eV on s2S
+  transition   BornPCS        BornICS      last PCS(V)    last PCS(T) canstop
+  s2S <-s2S  1.95158E-15    1.95206E-15    1.74122E-27    1.18842E-21    T
+  7.85282E-15  1.18842E-21   1.00000 s2S TCS (op. th.), last cont., ratio to sum
+  0  1  1    7.85282E-15   -1.84830E+00    1.00000E+00    1.18842E-21    1.69500E+01 s2S <-s2S
+2.000E+00eV on s2S for J = 20 eigenphase sum and Rcond(S=0):  1.100E-04  0.000E+00
+                    CS        summed l=    0
+2.000E+00eV on s2S TNBCS(S=0): 7.85E-15 = 7.85E-15
+2.000E+00eV on s2S  TICS(S=0): 0.00E+00 = 0.00E+00
+2.000E+00eV on s2S   TCS(S=0): 7.85E-15 = 7.85E-15
+2.000E+00eV on s2S   SCS(S=0): 0.00E+00 = 0.00E+00
+-------------------------------------------------------------------------------
+2.000E+00eV on s2S BTICS: all, to E/2  0.000E+00  0.000E+00
+2.000E+00eV on s2S TNBCS:      7.85E-15 = 7.85E-15
+2.000E+00eV on s2S  TICS:      0.00E+00 = 0.00E+00
+2.000E+00eV on s2S   TCS:      7.85E-15 = 7.85E-15
+-------------------------------------------------------------------------------
+2.000E+00eV on s2S TNBCS,+extra, spin asymmetry:  7.853E-15  7.853E-15  1.000E+00
+2.000E+00eV on s2S TICS: s, t-s, +, a  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+2.000E+00eV on s2S TIECS( 1), +extrap, and asym:  0.000E+00  0.000E+00  0.000E+00
+2.000E+00eV on s2S TIECS( 2), +extrap, and asym:  0.000E+00  0.000E+00  0.000E+00
+2.000E+00eV on s2S TIECS( 3), +extrap, and asym:  0.000E+00  0.000E+00  0.000E+00
+2.000E+00eV on s2S TIECS( 4), +extrap, and asym:  0.000E+00  0.000E+00  0.000E+00
+2.000E+00eV on s2S TIECS( 5), +extrap, and asym:  0.000E+00  0.000E+00  0.000E+00
+2.000E+00eV on s2S TIECS( 6), +extrap, and asym:  0.000E+00  0.000E+00  0.000E+00
+2.000E+00eV on s2S TCS (op. th.), + extra, asym:  7.853E-15  7.853E-15  1.000E+00
+-------------------------------------------------------------------------------
+transition  cross section  extrapolated     overlap       spin asym    energy     energydiff
+s2S <-s2S    7.85282E-15    7.85331E-15    1.00000E+00    1.00000E+00 -1.848E+00  1.695E+01

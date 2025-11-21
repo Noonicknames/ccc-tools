@@ -1,0 +1,420 @@
+   0   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J =  0  sum, opt, rat. TCS(0,0):  9.418E-17 9.418E-17 1.0000
+1.0000E+01eV on s2S for partial wave J =  0 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  0   TNBCS(0,0):   9.418E-17
+1.0000E+01eV on s2S for partial wave J =  0 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  0 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J =  0 eigenphase sum and Rcond(0,0): -1.105E+00  0.000E+00
+  0  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  9.418E-17  5.018E-16  1.000E+00
+  0 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J=  0 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+  0 s2S <-s2S  7.04231E-17  1.20863E-16  1.10147E-15  7.04231E-17  0.00000E+00 -1.84830E+00  1.0000 0
+  0 s2P <-s2S  1.63407E-17  3.66119E-16  1.42175E-19  1.63407E-17  0.00000E+00 -1.16396E+00  1.0000 0
+  0 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+  0 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+  0 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+  0 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+  0 t2P <-s2S  7.41383E-18  1.48277E-17  0.00000E+00  7.41383E-18  0.00000E+00 -1.50865E+00  1.0000 0
+   1   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J =  1  sum, opt, rat. TCS(0,0):  1.256E-15 1.256E-15 1.0000
+1.0000E+01eV on s2S for partial wave J =  1 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  1   TNBCS(0,0):   1.256E-15
+1.0000E+01eV on s2S for partial wave J =  1 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  1 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J =  1 eigenphase sum and Rcond(0,0):  6.498E-01  0.000E+00
+  1  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  1.350E-15  1.457E-15  1.000E+00
+  1 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J=  1 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+  1 s2S <-s2S  1.22209E-15  1.22352E-15  4.90117E-17  1.15167E-15  0.00000E+00 -1.84830E+00  1.0000 0
+  1 s2P <-s2S  5.55571E-17  9.54179E-17  3.09918E-16  3.92164E-17  0.00000E+00 -1.16396E+00  1.0000 0
+  1 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+  1 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+  1 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+  1 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+  1 t2P <-s2S  7.26695E-17  1.37925E-16  0.00000E+00  6.52556E-17  0.00000E+00 -1.50865E+00  1.0000 0
+   2   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J =  2  sum, opt, rat. TCS(0,0):  3.561E-16 3.561E-16 1.0000
+1.0000E+01eV on s2S for partial wave J =  2 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  2   TNBCS(0,0):   3.561E-16
+1.0000E+01eV on s2S for partial wave J =  2 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  2 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J =  2 eigenphase sum and Rcond(0,0):  1.847E-01  0.000E+00
+  2  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  1.706E-15  1.829E-15  1.000E+00
+  2 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J=  2 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+  2 s2S <-s2S  1.45022E-15  1.45046E-15  1.19229E-18  2.28131E-16  0.00000E+00 -1.84830E+00  1.0000 0
+  2 s2P <-s2S  6.45025E-17  6.75552E-17  3.68081E-17  8.94542E-18  0.00000E+00 -1.16396E+00  1.0000 0
+  2 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+  2 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+  2 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+  2 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+  2 t2P <-s2S  1.91720E-16  3.10771E-16  0.00000E+00  1.19051E-16  0.00000E+00 -1.50865E+00  1.0000 0
+   3   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J =  3  sum, opt, rat. TCS(0,0):  3.749E-16 3.749E-16 1.0000
+1.0000E+01eV on s2S for partial wave J =  3 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  3   TNBCS(0,0):   3.749E-16
+1.0000E+01eV on s2S for partial wave J =  3 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  3 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J =  3 eigenphase sum and Rcond(0,0):  6.493E-01  0.000E+00
+  3  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.081E-15  2.089E-15  1.000E+00
+  3 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J=  3 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+  3 s2S <-s2S  1.53658E-15  1.53680E-15  2.28756E-20  8.63583E-17  0.00000E+00 -1.84830E+00  1.0000 0
+  3 s2P <-s2S  3.46188E-16  3.46481E-16  2.76009E-18  2.81686E-16  0.00000E+00 -1.16396E+00  1.0000 0
+  3 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+  3 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+  3 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+  3 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+  3 t2P <-s2S  1.98541E-16  2.05363E-16  0.00000E+00  6.82131E-18  0.00000E+00 -1.50865E+00  1.0000 0
+   4   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J =  4  sum, opt, rat. TCS(0,0):  1.215E-16 1.215E-16 1.0000
+1.0000E+01eV on s2S for partial wave J =  4 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  4   TNBCS(0,0):   1.215E-16
+1.0000E+01eV on s2S for partial wave J =  4 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  4 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J =  4 eigenphase sum and Rcond(0,0):  1.643E-01  0.000E+00
+  4  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.203E-15  2.203E-15  1.000E+00
+  4 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J=  4 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+  4 s2S <-s2S  1.56822E-15  1.56844E-15  4.86277E-22  3.16362E-17  0.00000E+00 -1.84830E+00  1.0000 0
+  4 s2P <-s2S  4.36053E-16  4.36154E-16  1.91248E-19  8.98646E-17  0.00000E+00 -1.16396E+00  1.0000 0
+  4 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+  4 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+  4 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+  4 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+  4 t2P <-s2S  1.98590E-16  1.98639E-16  0.00000E+00  4.91317E-20  0.00000E+00 -1.50865E+00  1.0000 0
+   5   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J =  5  sum, opt, rat. TCS(0,0):  1.728E-17 1.728E-17 1.0000
+1.0000E+01eV on s2S for partial wave J =  5 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  5   TNBCS(0,0):   1.728E-17
+1.0000E+01eV on s2S for partial wave J =  5 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  5 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J =  5 eigenphase sum and Rcond(0,0):  6.206E-02  0.000E+00
+  5  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.220E-15  2.220E-15  1.000E+00
+  5 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J=  5 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+  5 s2S <-s2S  1.57456E-15  1.57478E-15  2.33598E-23  6.33651E-18  0.00000E+00 -1.84830E+00  1.0000 0
+  5 s2P <-s2S  4.46993E-16  4.47084E-16  1.15382E-20  1.09404E-17  0.00000E+00 -1.16396E+00  1.0000 0
+  5 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+  5 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+  5 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+  5 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+  5 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  1.30622E-23  0.00000E+00 -1.50865E+00  1.0000 0
+   6   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J =  6  sum, opt, rat. TCS(0,0):  3.211E-18 3.211E-18 1.0000
+1.0000E+01eV on s2S for partial wave J =  6 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  6   TNBCS(0,0):   3.211E-18
+1.0000E+01eV on s2S for partial wave J =  6 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  6 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J =  6 eigenphase sum and Rcond(0,0):  2.099E-02  0.000E+00
+  6  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.223E-15  2.224E-15  1.000E+00
+  6 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J=  6 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+  6 s2S <-s2S  1.57655E-15  1.57677E-15  4.19064E-24  1.98690E-18  0.00000E+00 -1.84830E+00  1.0000 0
+  6 s2P <-s2S  4.48217E-16  4.48306E-16  8.12429E-22  1.22392E-18  0.00000E+00 -1.16396E+00  1.0000 0
+  6 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+  6 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+  6 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+  6 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+  6 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  2.23047E-25  0.00000E+00 -1.50865E+00  1.0000 0
+   7   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J =  7  sum, opt, rat. TCS(0,0):  9.184E-19 9.184E-19 1.0000
+1.0000E+01eV on s2S for partial wave J =  7 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  7   TNBCS(0,0):   9.184E-19
+1.0000E+01eV on s2S for partial wave J =  7 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  7 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J =  7 eigenphase sum and Rcond(0,0):  8.370E-03  0.000E+00
+  7  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.224E-15  2.225E-15  1.000E+00
+  7 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J=  7 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+  7 s2S <-s2S  1.57734E-15  1.57756E-15  1.60153E-24  7.93956E-19  0.00000E+00 -1.84830E+00  1.0000 0
+  7 s2P <-s2S  4.48341E-16  4.48430E-16  1.02277E-22  1.24455E-19  0.00000E+00 -1.16396E+00  1.0000 0
+  7 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+  7 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+  7 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+  7 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+  7 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  6.05272E-27  0.00000E+00 -1.50865E+00  1.0000 0
+   8   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J =  8  sum, opt, rat. TCS(0,0):  3.548E-19 3.548E-19 1.0000
+1.0000E+01eV on s2S for partial wave J =  8 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  8   TNBCS(0,0):   3.548E-19
+1.0000E+01eV on s2S for partial wave J =  8 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  8 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J =  8 eigenphase sum and Rcond(0,0):  2.410E-03  0.000E+00
+  8  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+  8 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J=  8 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+  8 s2S <-s2S  1.57768E-15  1.57791E-15  7.90236E-25  3.44998E-19  0.00000E+00 -1.84830E+00  1.0000 0
+  8 s2P <-s2S  4.48351E-16  4.48440E-16  2.20471E-23  9.81666E-21  0.00000E+00 -1.16396E+00  1.0000 0
+  8 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+  8 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+  8 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+  8 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+  8 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  1.23690E-28  0.00000E+00 -1.50865E+00  1.0000 0
+   9   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J =  9  sum, opt, rat. TCS(0,0):  1.793E-19 1.793E-19 1.0000
+1.0000E+01eV on s2S for partial wave J =  9 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  9   TNBCS(0,0):   1.793E-19
+1.0000E+01eV on s2S for partial wave J =  9 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J =  9 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J =  9 eigenphase sum and Rcond(0,0):  7.785E-05  0.000E+00
+  9  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+  9 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J=  9 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+  9 s2S <-s2S  1.57786E-15  1.57808E-15  4.33486E-25  1.78388E-19  0.00000E+00 -1.84830E+00  1.0000 0
+  9 s2P <-s2S  4.48352E-16  4.48440E-16  1.78942E-22  8.64697E-22  0.00000E+00 -1.16396E+00  1.0000 0
+  9 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+  9 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+  9 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+  9 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+  9 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  3.10086E-30  0.00000E+00 -1.50865E+00  1.0000 0
+  10   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J = 10  sum, opt, rat. TCS(0,0):  1.001E-19 1.001E-19 1.0000
+1.0000E+01eV on s2S for partial wave J = 10 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 10   TNBCS(0,0):   1.001E-19
+1.0000E+01eV on s2S for partial wave J = 10 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 10 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J = 10 eigenphase sum and Rcond(0,0): -9.737E-04  0.000E+00
+ 10  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+ 10 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J= 10 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+ 10 s2S <-s2S  1.57796E-15  1.57818E-15  2.55594E-25  1.00013E-19  0.00000E+00 -1.84830E+00  1.0000 0
+ 10 s2P <-s2S  4.48352E-16  4.48441E-16  7.61774E-23  6.52565E-23  0.00000E+00 -1.16396E+00  1.0000 0
+ 10 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+ 10 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+ 10 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+ 10 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+ 10 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  2.69182E-31  0.00000E+00 -1.50865E+00  1.0000 0
+  11   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J = 11  sum, opt, rat. TCS(0,0):  5.973E-20 5.973E-20 1.0000
+1.0000E+01eV on s2S for partial wave J = 11 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 11   TNBCS(0,0):   5.973E-20
+1.0000E+01eV on s2S for partial wave J = 11 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 11 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J = 11 eigenphase sum and Rcond(0,0): -1.461E-03  0.000E+00
+ 11  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+ 11 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J= 11 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+ 11 s2S <-s2S  1.57802E-15  1.57824E-15  1.60177E-25  5.97142E-20  0.00000E+00 -1.84830E+00  1.0000 0
+ 11 s2P <-s2S  4.48352E-16  4.48441E-16  1.19467E-22  1.22997E-23  0.00000E+00 -1.16396E+00  1.0000 0
+ 11 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+ 11 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+ 11 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+ 11 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+ 11 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  8.93930E-32  0.00000E+00 -1.50865E+00  1.0000 0
+  12   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J = 12  sum, opt, rat. TCS(0,0):  3.757E-20 3.757E-20 1.0000
+1.0000E+01eV on s2S for partial wave J = 12 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 12   TNBCS(0,0):   3.757E-20
+1.0000E+01eV on s2S for partial wave J = 12 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 12 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J = 12 eigenphase sum and Rcond(0,0): -1.655E-03  0.000E+00
+ 12  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+ 12 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J= 12 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+ 12 s2S <-s2S  1.57806E-15  1.57828E-15  1.05306E-25  3.74533E-20  0.00000E+00 -1.84830E+00  1.0000 0
+ 12 s2P <-s2S  4.48352E-16  4.48441E-16  1.53733E-22  1.13142E-22  0.00000E+00 -1.16396E+00  1.0000 0
+ 12 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+ 12 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+ 12 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+ 12 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+ 12 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  2.41620E-34  0.00000E+00 -1.50865E+00  1.0000 0
+  13   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J = 13  sum, opt, rat. TCS(0,0):  2.453E-20 2.453E-20 1.0000
+1.0000E+01eV on s2S for partial wave J = 13 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 13   TNBCS(0,0):   2.453E-20
+1.0000E+01eV on s2S for partial wave J = 13 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 13 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J = 13 eigenphase sum and Rcond(0,0): -1.701E-03  0.000E+00
+ 13  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+ 13 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J= 13 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+ 13 s2S <-s2S  1.57808E-15  1.57831E-15  7.17077E-26  2.44975E-20  0.00000E+00 -1.84830E+00  1.0000 0
+ 13 s2P <-s2S  4.48352E-16  4.48441E-16  3.53376E-23  3.00131E-23  0.00000E+00 -1.16396E+00  1.0000 0
+ 13 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+ 13 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+ 13 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+ 13 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+ 13 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  1.42459E-35  0.00000E+00 -1.50865E+00  1.0000 0
+  14   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J = 14  sum, opt, rat. TCS(0,0):  1.669E-20 1.669E-20 1.0000
+1.0000E+01eV on s2S for partial wave J = 14 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 14   TNBCS(0,0):   1.669E-20
+1.0000E+01eV on s2S for partial wave J = 14 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 14 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J = 14 eigenphase sum and Rcond(0,0): -1.671E-03  0.000E+00
+ 14  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+ 14 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J= 14 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+ 14 s2S <-s2S  1.57810E-15  1.57832E-15  5.01760E-26  1.65633E-20  0.00000E+00 -1.84830E+00  1.0000 0
+ 14 s2P <-s2S  4.48352E-16  4.48441E-16  1.89452E-22  1.25547E-22  0.00000E+00 -1.16396E+00  1.0000 0
+ 14 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+ 14 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+ 14 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+ 14 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+ 14 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  1.45284E-37  0.00000E+00 -1.50865E+00  1.0000 0
+  15   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J = 15  sum, opt, rat. TCS(0,0):  1.158E-20 1.158E-20 1.0000
+1.0000E+01eV on s2S for partial wave J = 15 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 15   TNBCS(0,0):   1.158E-20
+1.0000E+01eV on s2S for partial wave J = 15 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 15 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J = 15 eigenphase sum and Rcond(0,0): -1.602E-03  0.000E+00
+ 15  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+ 15 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J= 15 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+ 15 s2S <-s2S  1.57811E-15  1.57833E-15  3.59288E-26  1.15480E-20  0.00000E+00 -1.84830E+00  1.0000 0
+ 15 s2P <-s2S  4.48352E-16  4.48441E-16  3.39514E-23  3.55358E-23  0.00000E+00 -1.16396E+00  1.0000 0
+ 15 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+ 15 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+ 15 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+ 15 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+ 15 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  9.86490E-41  0.00000E+00 -1.50865E+00  1.0000 0
+  16   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J = 16  sum, opt, rat. TCS(0,0):  8.436E-21 8.436E-21 1.0000
+1.0000E+01eV on s2S for partial wave J = 16 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 16   TNBCS(0,0):   8.436E-21
+1.0000E+01eV on s2S for partial wave J = 16 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 16 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J = 16 eigenphase sum and Rcond(0,0): -1.513E-03  0.000E+00
+ 16  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+ 16 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J= 16 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+ 16 s2S <-s2S  1.57812E-15  1.57834E-15  2.62608E-26  8.24305E-21  0.00000E+00 -1.84830E+00  1.0000 0
+ 16 s2P <-s2S  4.48352E-16  4.48441E-16  1.05059E-22  1.92729E-22  0.00000E+00 -1.16396E+00  1.0000 0
+ 16 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+ 16 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+ 16 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+ 16 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+ 16 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  1.37419E-44  0.00000E+00 -1.50865E+00  1.0000 0
+  17   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J = 17  sum, opt, rat. TCS(0,0):  6.062E-21 6.062E-21 1.0000
+1.0000E+01eV on s2S for partial wave J = 17 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 17   TNBCS(0,0):   6.062E-21
+1.0000E+01eV on s2S for partial wave J = 17 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 17 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J = 17 eigenphase sum and Rcond(0,0): -1.420E-03  0.000E+00
+ 17  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+ 17 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J= 17 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+ 17 s2S <-s2S  1.57813E-15  1.57835E-15  1.95492E-26  6.02696E-21  0.00000E+00 -1.84830E+00  1.0000 0
+ 17 s2P <-s2S  4.48352E-16  4.48441E-16  7.32229E-23  3.54989E-23  0.00000E+00 -1.16396E+00  1.0000 0
+ 17 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+ 17 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+ 17 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+ 17 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+ 17 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  2.14844E-46  0.00000E+00 -1.50865E+00  1.0000 0
+  18   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J = 18  sum, opt, rat. TCS(0,0):  4.828E-21 4.828E-21 1.0000
+1.0000E+01eV on s2S for partial wave J = 18 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 18   TNBCS(0,0):   4.828E-21
+1.0000E+01eV on s2S for partial wave J = 18 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 18 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J = 18 eigenphase sum and Rcond(0,0): -1.322E-03  0.000E+00
+ 18  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+ 18 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J= 18 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+ 18 s2S <-s2S  1.57813E-15  1.57836E-15  1.47947E-26  4.48346E-21  0.00000E+00 -1.84830E+00  1.0000 0
+ 18 s2P <-s2S  4.48352E-16  4.48441E-16  1.16331E-22  3.44330E-22  0.00000E+00 -1.16396E+00  1.0000 0
+ 18 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+ 18 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+ 18 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+ 18 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+ 18 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  4.90667E-48  0.00000E+00 -1.50865E+00  1.0000 0
+  19   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J = 19  sum, opt, rat. TCS(0,0):  3.435E-21 3.435E-21 1.0000
+1.0000E+01eV on s2S for partial wave J = 19 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 19   TNBCS(0,0):   3.435E-21
+1.0000E+01eV on s2S for partial wave J = 19 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 19 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J = 19 eigenphase sum and Rcond(0,0): -1.231E-03  0.000E+00
+ 19  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+ 19 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J= 19 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+ 19 s2S <-s2S  1.57813E-15  1.57835E-15  1.13620E-26  3.40140E-21  0.00000E+00 -1.84830E+00  1.0000 0
+ 19 s2P <-s2S  4.48352E-16  4.48441E-16  5.21477E-23  3.34374E-23  0.00000E+00 -1.16396E+00  1.0000 0
+ 19 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+ 19 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+ 19 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+ 19 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+ 19 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  4.05224E-47  0.00000E+00 -1.50865E+00  1.0000 0
+  20   7   1 Units: cm^2     electron - B II  
+ 1.00000E+01 eV on s2S
+
+1.0000E+01eV on s2S J = 20  sum, opt, rat. TCS(0,0):  3.149E-21 3.149E-21 1.0000
+1.0000E+01eV on s2S for partial wave J = 20 TICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 20   TNBCS(0,0):   3.149E-21
+1.0000E+01eV on s2S for partial wave J = 20 PsTNBCS(0,0):   0.000E+00
+1.0000E+01eV on s2S for partial wave J = 20 PsTICS(0,0):   0.000E+00
+1.0000E+01eV on s2S for J = 20 eigenphase sum and Rcond(0,0): -1.141E-03  0.000E+00
+ 20  1.000E+01eV on s2S TNBCS,+extra, spin asymmetry:  2.225E-15  2.225E-15  1.000E+00
+ 20 1.000E+01eV on s2S  TICS(0,0): 0.00E+00 = 0.00E+00 + 0.00E+00 + 0.00E+00
+J= 20 1.000E+01eV on s2S TICS, +extra, spin asym:  0.000E+00  0.000E+00  0.000E+00
+ J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
+ 20 s2S <-s2S  1.57813E-15  1.57835E-15  8.84207E-27  2.61455E-21  0.00000E+00 -1.84830E+00  1.0000 0
+ 20 s2P <-s2S  4.48353E-16  4.48441E-16  4.51418E-22  5.34884E-22  0.00000E+00 -1.16396E+00  1.0000 0
+ 20 t3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.65538E-01  0.0000 0
+ 20 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  0.0000 0
+ 20 s3D <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -9.05833E-01  0.0000 0
+ 20 s3S <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -6.55211E-01  0.0000 0
+ 20 t2P <-s2S  1.98590E-16  1.98590E-16  0.00000E+00  2.70316E-49  0.00000E+00 -1.50865E+00  1.0000 0

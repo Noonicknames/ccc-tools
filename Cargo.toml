@@ -1,0 +1,47 @@
+[workspace]
+members = [
+    "calc-rates",
+    "diagnostics",
+    "prep-plot",
+    "state-parse",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Noonicknames"]
+rust-version = "1.85"
+readme = "README.md"
+
+
+[workspace.dependencies]
+diagnostics = { path = "./diagnostics" }
+state-parse = { path = "./state-parse" }
+
+thiserror = { version = "2.0" }
+bitflags = { version = "2.10" }
+arrayvec = { version = "0.7" }
+
+clap = { version = "4.5" }
+colored = { version = "3.0" }
+unicode-width = { version = "0.2" }
+
+serde = { version = "1.0", default-features = false }
+ron = { version = "0.10" }
+
+tokio = { version = "1.48" }
+tokio-stream = { version = "0.1" }
+futures = { version = "0.3", default-features = false }
+
+[profile.release]
+opt-level = "z"
+overflow-checks = false
+debug = 1
+# strip = true
+panic = "unwind"
+codegen-units = 1
+lto = "fat"
+
+[profile.dev.package."*"]
+opt-level = 3

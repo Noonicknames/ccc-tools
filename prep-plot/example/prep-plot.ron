@@ -1,0 +1,54 @@
+(
+    result_sets: [
+        (
+            name: "bound-states-3-poisoned",
+            source: Folder("./bound_states_3_poisoned"),
+        ),
+        (
+            name: "bound-states-3",
+            source: Folder("./bound_states_3"),
+        ),
+        (
+            name: "full_run",
+            source: Folder("./full_run"),
+        ),
+        (
+            name: "single",
+            source: Folder("./single"),
+        ),
+        (
+            name: "full_run_halves",
+            source: Folders(["./lower_half_full_run", "./upper_half_full_run"]),
+        ),
+        (
+            name: "alpha-latop-3-metastable-smaller-kgrid",
+            source: Folder("./alpha-latop-3-metastable-smaller-kgrid"),
+        ),
+    ],
+    cs_kind: 
+        // Partial(
+        //     column: CrossSection,
+        //     partial_wave: 0,
+        // ),
+        Integrated (
+            extrapolated: true,
+        ),
+    transitions: [
+        "ion<-s2S",
+        "ion<-t2P",
+        "s2P#0<-s2S",
+        "s2P#1<-s2S",
+        "s3D<-s2S",
+        "s3S<-s2S",
+        "s4S<-s2S",
+        "s3P<-s2S",
+        "s5S<-s2S",
+        "s4P<-s2S",
+        "s4F<-s2S",
+        "s5D<-s2S",
+    ],
+    output_folder: "./test_out",
+    units: Atomic,
+    overwrite: true,
+    add_threshold_point: true,
+)
