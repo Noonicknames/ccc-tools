@@ -7,6 +7,13 @@
         (
             name: "bound-states-3",
             source: Folder("./bound_states_3"),
+            // Individually specified is possible.
+            cs_kind: Some(
+                Partial ( 
+                    column: CrossSection, 
+                    partial_wave: 0 
+                )
+            ),
         ),
         (
             name: "full_run",
