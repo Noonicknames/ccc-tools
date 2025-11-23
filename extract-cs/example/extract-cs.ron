@@ -33,13 +33,13 @@
         ),
     ],
     cs_kind: 
-        // Partial(
-        //     column: CrossSection,
-        //     partial_wave: 0,
-        // ),
-        Integrated (
-            extrapolated: true,
+        Partial(
+            column: CrossSection,
+            partial_wave: 0,
         ),
+        // Integrated (
+        //     extrapolated: true,
+        // ),
     transitions: [
         "ion<-s2S",
         "ion<-t2P",

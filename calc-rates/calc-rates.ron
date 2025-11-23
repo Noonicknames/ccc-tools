@@ -1,0 +1,18 @@
+(
+    result_sets: [
+        (
+            name: "s2P<-s2S",
+            source: "ics.s2P.s2S",
+            grid: Auto,
+        ),
+    ],
+    temperatures: [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+    ],
+    energy_units: Auto,
+    cs_units: Auto,
+)

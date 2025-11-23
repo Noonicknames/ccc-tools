@@ -7,14 +7,6 @@ edition = "2021"
 name = "moai"
 path = "examples/moai.rs"
 
-
-[profile.release]
-opt-level = 3               # Use slightly better optimizations.
-overflow-checks = false
-strip = true
-lto = true
-panic = "abort"
-
 [dependencies]
 bitflags = { workspace = true }
 colored = { workspace = true }

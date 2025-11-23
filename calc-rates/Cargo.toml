@@ -4,3 +4,21 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+nalgebra = { workspace = true, features = ["serde", "serde-serialize"] }
+la.workspace = true
+rustnomial.workspace = true
+special.workspace = true
+
+serde.workspace = true
+clap = { workspace = true, features = ["derive"] }
+diagnostics = { workspace = true, features = ["tokio"] }
+thiserror.workspace = true
+tokio = { workspace = true, features = [
+    "fs",
+    "rt",
+    "rt-multi-thread",
+    "io-std",
+    "io-util",
+] }
+ron.workspace = true
+unicode-width.workspace = true

@@ -25,8 +25,3 @@ tokio = { workspace = true, features = [
 unicode-width = { workspace = true }
 tokio-stream = { workspace = true, features = ["fs"]}
 futures = { workspace = true, default-features = false }
-
-[profile.release]
-opt-level = 3
-lto = "fat"
-strip = true
