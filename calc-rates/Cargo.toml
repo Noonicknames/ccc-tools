@@ -20,5 +20,7 @@ tokio = { workspace = true, features = [
     "io-std",
     "io-util",
 ] }
+tokio-stream = { workspace = true, features = ["fs", "io-util"]}
 ron.workspace = true
 unicode-width.workspace = true
+ordered-float.workspace = true

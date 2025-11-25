@@ -10,7 +10,8 @@ use la::{BlasLib, LapackeLib};
 use nalgebra::dvector;
 
 use crate::{
-    calc::{CalcCmdError, cmd_calc}, grid::{laguerre_ttrr, legendre_ttrr}, new::{NewCmdError, cmd_new}
+    calc::{CalcCmdError, cmd_calc},
+    new::{NewCmdError, cmd_new},
 };
 
 pub mod config;

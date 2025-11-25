@@ -51,15 +51,11 @@ where
     /// Scale the integration bounds and adjust the weights accordingly.
     ///
     /// For example, scaling by 2.0 will change bounds from `[-1,1]` to `[-2,2]`.
-    ///
-    /// # Errors
-    /// This will only error if the provided vector does not match the dimensions of the rule.
-    pub fn scale_x(&mut self, scale: T) -> Result<(), ()> {
+    pub fn scale_x(&mut self, scale: T) {
         self.points
             .row_iter_mut()
             .for_each(|mut row| row *= scale.clone());
         self.weights *= scale;
-        Ok(())
     }
 
     pub fn eval_fn(&self, f: impl FnMut(GridPointRef<T>) -> T) -> T {

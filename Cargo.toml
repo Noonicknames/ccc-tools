@@ -21,6 +21,7 @@ nalgebra = { version = "0.34" }
 la = { git = "https://github.com/Noonicknames/la.git" }
 rustnomial = { version = "0.3" }
 special = { version = "0.11" }
+ordered-float = { version = "5.1" }
 
 diagnostics = { path = "./diagnostics" }
 state-parse = { path = "./state-parse" }
