@@ -16,11 +16,12 @@ use crate::{
 
 pub mod config;
 pub mod grid;
+pub mod util;
 
 pub mod calc;
 pub mod new;
 
-/// Calculates rates vs temperature from (cross-section, projectile energy) data.
+/// Calculates rates vs temperature from two-column (projectile energy, cross-section) data files.
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
@@ -30,6 +31,7 @@ pub struct Cli {
 
 #[derive(Clone, clap::Subcommand)]
 pub enum Commands {
+    /// Create a config file.
     New {
         /// Path to write template config file to.
         #[arg(long, default_value = "calc-rates.ron")]
@@ -38,6 +40,7 @@ pub enum Commands {
         #[arg(short, long)]
         force: bool,
     },
+    /// Calculate rates from a config file.
     Calc {
         #[arg(long, default_value = "calc-rates.ron")]
         path: String,
@@ -87,7 +90,7 @@ pub async fn async_run() -> Result<(), AppError> {
         }
         Commands::Calc { path } => {
             if let Err(err) = cmd_calc(&path, &diagnostics).await {
-                diagnostics.write_log_background(error!("{}", err));
+                diagnostics.write_log_background(err.to_log());
                 Err(err.into())
             } else {
                 Ok(())

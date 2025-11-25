@@ -69,10 +69,10 @@ impl ExtractCmdError {
                 Snippet::empty(Some(file_path.clone())).with_chunk(
                     SnippetChunk::from_str(&lines, SnippetLineKind::Normal, *start_line)
                         .with_highlight(
-                            err.position.line,
+                            err.span.start.line,
                             LineHighlight::new(
-                                err.position.col - 1,
-                                1,
+                                err.span.start.col - 1,
+                                err.span.end.col - err.span.start.col,
                                 err.to_string(),
                                 LineHighlightTheme::ERROR,
                             ),
@@ -120,7 +120,7 @@ async fn get_config(file_path: impl AsRef<Path>) -> Result<Config, ExtractCmdErr
 
         Ok(ron::from_str::<ConfigSerde>(&buf).map(|config| config.to_config()).map_err(|err| {
             let mut buf_lines = buf.lines();
-            let start_line = err.position.line.checked_sub(1).unwrap_or(0);
+            let start_line = err.span.start.line.checked_sub(1).unwrap_or(0);
             for _ in 0..start_line - 1 {
                 buf_lines.next();
             }

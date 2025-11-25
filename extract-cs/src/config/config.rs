@@ -54,7 +54,7 @@ pub struct Config {
 }
 
 fn default_output_folder() -> String {
-    "./plot_results".to_string()
+    "./extract-cs-out".to_string()
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]

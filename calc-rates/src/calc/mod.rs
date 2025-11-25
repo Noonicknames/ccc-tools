@@ -1,10 +1,15 @@
-use std::{collections::BTreeMap, path::Path, sync::Arc};
+use std::{
+    collections::BTreeMap,
+    io::Write,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use diagnostics::{
-    LogComponent,
+    Log, LogComponent,
     components::snippet::{
-        Footer, FooterKind, LineHighlight, LineHighlightTheme, Snippet, SnippetChunk,
-        SnippetLineKind,
+        Footer, FooterKind, LineHighlight, LineHighlightTheme, MultiLineHighlight, Snippet,
+        SnippetChunk, SnippetLineKind,
     },
     diagnostics::AsyncDiagnostics,
     error, info, warn,
@@ -13,17 +18,18 @@ use nalgebra::DVector;
 use ordered_float::OrderedFloat;
 use tokio::{
     fs::OpenOptions,
-    io::{AsyncBufReadExt, AsyncReadExt, BufReader},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
 };
 use tokio_stream::{StreamExt, wrappers::LinesStream};
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
     config::{
-        Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits, EnergyUnitsOrAuto, Grid,
-        GridConfig, ResultSet,
+        Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits, EnergyUnitsOrAuto, GridConfig,
+        GridPoints, ResultSet, TemperatureUnits,
     },
-    grid::moment_fitted,
+    grid::{Grid, moment_fitted},
+    util::ensure_folder_exists,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -32,6 +38,11 @@ pub enum CalcCmdError {
     OpenConfig {
         file_path: String,
         err: std::io::Error,
+    },
+    #[error("Failed to create result folder '{path}'.\n{io_err}")]
+    CreateResultFolder {
+        path: PathBuf,
+        io_err: std::io::Error,
     },
     #[error("Config file '{file_path}' is not valid utf8: {err}")]
     ConfigInvalidUtf8 {
@@ -47,6 +58,51 @@ pub enum CalcCmdError {
     },
 }
 
+impl CalcCmdError {
+    pub fn to_log(&self) -> Log {
+        match self {
+            Self::ConfigParse {
+                file_path,
+                start_line,
+                lines,
+                err,
+            } => {
+                let mut snippet = Snippet::empty(Some(file_path.clone()));
+                let mut chunk =
+                    SnippetChunk::from_str(&lines, SnippetLineKind::Normal, *start_line);
+
+                // Same line error
+                if err.span.end.line == err.span.start.line {
+                    _ = chunk.set_highlight(
+                        err.span.start.line,
+                        Some(LineHighlight::new(
+                            err.span.start.col - 1,
+                            err.span.end.col - err.span.start.col + 1,
+                            err.to_string(),
+                            LineHighlightTheme::ERROR,
+                        )),
+                    );
+                } else {
+                    chunk.set_multiline_highlight(Some(MultiLineHighlight {
+                        start_message: err.to_string(),
+                        start_line: err.span.start.line,
+                        start_col: err.span.start.col,
+                        end_message: "".to_owned(),
+                        end_line: err.span.end.line,
+                        end_col: err.span.end.col,
+                        theme: LineHighlightTheme::ERROR,
+                    }));
+                }
+
+                snippet.add_chunk(chunk);
+
+                error!("Failed to parse config file").with_component(LogComponent::Snippet(snippet))
+            }
+            _ => error!("{}", self),
+        }
+    }
+}
+
 pub async fn cmd_calc(
     path: impl AsRef<Path>,
     diagnostics: &Arc<AsyncDiagnostics>,
@@ -54,16 +110,35 @@ pub async fn cmd_calc(
     let Config {
         result_sets,
         temperatures,
+        temperature_units,
         energy_units,
         cs_units,
+        output_folder,
     } = get_config(path).await?;
 
     let temperatures = Arc::new(temperatures);
+    let output_folder = Arc::new(PathBuf::from(output_folder));
+
+    if let Err(err) = ensure_folder_exists(output_folder.as_ref()).await {
+        return Err(CalcCmdError::CreateResultFolder {
+            path: output_folder.as_ref().clone(),
+            io_err: err,
+        });
+    }
 
     for result_set in result_sets {
         let diagnostics_copy = Arc::clone(diagnostics);
         let temperatures = Arc::clone(&temperatures);
-        if let Err(err) = process_result_set(result_set, temperatures, diagnostics_copy).await {
+        let output_folder = Arc::clone(&output_folder);
+        if let Err(err) = process_result_set(
+            result_set,
+            temperatures,
+            temperature_units,
+            output_folder,
+            diagnostics_copy,
+        )
+        .await
+        {
             diagnostics.write_log_background(error!("Error whilst reading result set: {}", err));
         }
     }
@@ -74,6 +149,8 @@ pub async fn cmd_calc(
 async fn process_result_set(
     result_set: ResultSet,
     temperatures: Arc<Vec<f64>>,
+    temperature_units: TemperatureUnits,
+    output_folder: Arc<PathBuf>,
     diagnostics: Arc<AsyncDiagnostics>,
 ) -> Result<(), std::io::Error> {
     let ResultSet {
@@ -95,39 +172,20 @@ async fn process_result_set(
         return Ok(());
     }
 
-    let grid_idx = resolve_grid(&energy_vec, &grid, name, &diagnostics);
-    let grid_cache = grid_idx
-        .windows(2)
-        .map(|window| {
-            let &[istart, iend] = window else {
-                unreachable!()
-            };
+    let (grid_idx, grid_cache) = resolve_grid(&energy_vec, &cs_vec, &grid, &name, &diagnostics);
 
-            let x_points = DVector::from_vec(energy_vec[istart..=iend].to_vec());
-            let start = energy_vec[istart];
-            let x_range = energy_vec[iend] - energy_vec[istart];
+    let mut rate_vec = Vec::with_capacity(temperatures.len());
 
-            let scaled_x_points = &x_points.add_scalar(-start) / x_range;
-
-            // Integrating from 0.0 to 1.0
-            let mut grid = moment_fitted(scaled_x_points.as_slice(), |i| 1.0 / (i + 1) as f64);
-            grid.scale_x(x_range);
-            grid.translate(&DVector::from_vec(vec![start])).unwrap();
-            grid
-        })
-        .collect::<Vec<_>>();
-
-    let mut collision_strength_vec = Vec::with_capacity(temperatures.len());
+    let temp_conversion =
+        TemperatureUnits::conversion_factor(temperature_units, TemperatureUnits::Hartree);
 
     for &temperature in temperatures.iter() {
-        // Boltzmann constant in Hartree/K
-        const BOLTZMANN: f64 = 3.1668e-6;
         // Integrand according to Joel
         // Atomic units kB = 1, T is in Kelvin, energy in hartree
         let integrand = energy_vec
             .iter()
             .zip(cs_vec.iter())
-            .map(|(&energy, &cs)| cs * energy * (-energy / (temperature * BOLTZMANN)).exp())
+            .map(|(&energy, &cs)| cs * energy * (-energy / (temperature * temp_conversion)).exp())
             .collect::<Vec<_>>();
 
         let mut result = 0.0;
@@ -143,32 +201,146 @@ async fn process_result_set(
         // Factor in front
         result = result
             * std::f64::consts::PI.sqrt().recip()
-            * (2.0 / (temperature * BOLTZMANN)).powf(3.0 / 2.0);
+            * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
 
-        collision_strength_vec.push(result);
+        rate_vec.push(result);
     }
 
-    println!("Grid: {:?}", grid_idx);
-    println!("Collision rates: {:?}", collision_strength_vec);
+    println!("Grid(Ha): {:?}", grid_idx);
+    println!("Collision rates: {:?}", rate_vec);
+
+    // Output results
+    let mut data = Vec::new();
+    writeln!(
+        &mut data,
+        "# Rates for `{}`, in units of {}, cm^3s^-1",
+        name,
+        temperature_units.as_str(),
+    )?;
+    write!(&mut data, "# Grid: [",)?;
+
+    for i in 0..grid_idx.len() - 1 {
+        write!(
+            &mut data,
+            "{:.3}-{:.3}({}pt),",
+            energy_vec[grid_idx[i]],
+            energy_vec[grid_idx[i + 1]],
+            grid_idx[i + 1] - grid_idx[i] + 1
+        )?;
+    }
+    write!(&mut data, "]\n")?;
+
+    for (temperature, rate) in temperatures.iter().zip(rate_vec.iter()) {
+        writeln!(&mut data, "{} {:E}", temperature, rate)?;
+    }
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(output_folder.join(&name))
+        .await?;
+
+    file.write_all(&data).await?;
 
     Ok(())
 }
 
+fn auto_grid(
+    x_points: &[f64],
+    integrand: &[f64],
+    mut error_threshold: impl FnMut(usize) -> f64,
+    max_degree: usize,
+) -> (Vec<usize>, Vec<Grid<f64>>) {
+    let mut idx_result = Vec::new();
+    idx_result.push(0);
+    let mut grid_result = Vec::new();
+
+    let get_result = |istart: usize, iend: usize| -> (Grid<f64>, f64) {
+        let x_points_temp = DVector::from_vec(x_points[istart..=iend].to_vec());
+        let start = x_points[istart];
+        let x_range = x_points[iend] - x_points[istart];
+
+        let scaled_x_points = &x_points_temp.add_scalar(-start) / x_range;
+        let mut grid = moment_fitted(scaled_x_points.as_slice(), |i| 1.0 / (i + 1) as f64);
+        grid.scale_x(x_range);
+        grid.translate(&DVector::from_vec(vec![start])).unwrap();
+        let val = grid.eval(&integrand[istart..=iend]);
+        (grid, val)
+    };
+
+    'outer: loop {
+        let istart = *idx_result.last().unwrap();
+        if istart == x_points.len() - 1 {
+            break;
+        }
+        let max_degree = max_degree.min(x_points.len() - istart - 1);
+        let mut prev_result = get_result(istart, istart + 1);
+
+        for degree in 2..=max_degree {
+            let result = get_result(istart, istart + degree);
+            let predicted_diff = get_result(istart + degree - 1, istart + degree).1;
+            let actual_diff = result.1 - prev_result.1;
+            let error_percent = actual_diff / predicted_diff * 100.0 - 100.0;
+
+            println!(
+                "{}: {:.5} vs {:.5} (prev), predicted_diff {:.5}, actual_diff {:.5}, error: {}%",
+                degree,
+                result.1,
+                prev_result.1,
+                predicted_diff,
+                actual_diff,
+                actual_diff / predicted_diff * 100.0 - 100.0
+            );
+
+            if error_percent.abs() > error_threshold(degree) || prev_result.1 < 0.0 {
+                println!("Degree {} unsatisfactory", degree);
+                idx_result.push(istart + degree - 1);
+                grid_result.push(prev_result.0);
+                continue 'outer;
+            }
+
+            prev_result = result;
+        }
+        println!("All satisfactory, pushing maximum");
+        idx_result.push(istart + max_degree);
+        grid_result.push(prev_result.0);
+    }
+    (idx_result, grid_result)
+}
+
 fn resolve_grid(
     energy_vec: &[f64],
+    cs_vec: &[f64],
     grid: &GridConfig,
     name: impl AsRef<str>,
     diagnostics: &Arc<AsyncDiagnostics>,
-) -> Vec<usize> {
+) -> (Vec<usize>, Vec<Grid<f64>>) {
     match grid {
-        GridConfig::Auto => todo!(),
+        GridConfig::Auto => {
+            // Basically the normal integrand but no Maxwellian decay factor, should be the most unstable.
+            let integrand = energy_vec
+                .iter()
+                .zip(cs_vec.iter())
+                .map(|(&energy, &cs)| energy * cs)
+                .collect::<Vec<_>>();
+
+            let error_threshold = |deg| 10.0 / (deg as f64 + 1.0).ln();
+
+            let max_degree = 4;
+
+            auto_grid(energy_vec, &integrand, error_threshold, max_degree)
+        }
         GridConfig::Manual(grid) => {
             let mut result = Vec::with_capacity(grid.len());
             let mut ptr = 0;
 
             'outer: for (i, grid) in grid.into_iter().enumerate() {
+                if ptr >= energy_vec.len() - 1 {
+                    break 'outer;
+                }
                 match grid {
-                    Grid::EnergyRange(range) => {
+                    GridPoints::EnergyRange(range) => {
                         'inner: loop {
                             let Some(energy) = energy_vec.get(ptr) else {
                                 break 'outer;
@@ -195,36 +367,61 @@ fn resolve_grid(
                             result.push(ptr);
                         } else {
                             diagnostics.write_log_background(warn!(
-                                "grid entry {} (zero-indexed) is empty for result set `{}`",
+                                "Grid entry {} (zero-indexed) is empty for result set `{}`",
                                 i,
                                 name.as_ref(),
                             ));
                         }
                     }
-                    Grid::PointsCount(0 | 1) => {
+                    GridPoints::PointsCount(0 | 1) => {
                         diagnostics.write_log_background(warn!(
-                            "grid entry {} (zero-indexed) for result set `{}` must have at least 2 or more points",
+                            "Grid entry {} (zero-indexed) for result set `{}` must have at least 2 or more points",
                             i, name.as_ref(),
                         ));
                     }
-                    Grid::PointsCount(n) => {
+                    GridPoints::PointsCount(n) => {
                         if result.is_empty() {
                             result.push(0);
                         }
                         result.push(
                             (*result.last().unwrap() + *n as usize - 1).min(energy_vec.len() - 1),
-                        )
+                        );
+                        ptr = *result.last().unwrap();
                     }
 
-                    Grid::ToEnd => {
+                    GridPoints::ToEnd => {
                         if result.is_empty() {
                             result.push(0);
                         }
-                        result.push(energy_vec.len() - 1)
+                        result.push(energy_vec.len() - 1);
+                        ptr = *result.last().unwrap();
+                        ptr = *result.last().unwrap();
                     }
                 }
             }
-            result
+
+            let grid_result = result
+                .windows(2)
+                .map(|window| {
+                    let &[istart, iend] = window else {
+                        unreachable!()
+                    };
+
+                    let x_points = DVector::from_vec(energy_vec[istart..=iend].to_vec());
+                    let start = energy_vec[istart];
+                    let x_range = energy_vec[iend] - energy_vec[istart];
+
+                    let scaled_x_points = &x_points.add_scalar(-start) / x_range;
+
+                    // Integrating from 0.0 to 1.0
+                    let mut grid =
+                        moment_fitted(scaled_x_points.as_slice(), |i| 1.0 / (i + 1) as f64);
+                    grid.scale_x(x_range);
+                    grid.translate(&DVector::from_vec(vec![start])).unwrap();
+                    grid
+                })
+                .collect::<Vec<_>>();
+            (result, grid_result)
         }
     }
 }
@@ -451,12 +648,12 @@ async fn get_config(file_path: impl AsRef<Path>) -> Result<Config, CalcCmdError>
             .map(ConfigSerde::to_config)
             .map_err(|err| {
                 let mut buf_lines = buf.lines();
-                let start_line = err.position.line.checked_sub(1).unwrap_or(0);
+                let start_line = err.span.start.line.checked_sub(2).unwrap_or(0) + 1;
                 for _ in 0..start_line - 1 {
                     buf_lines.next();
                 }
                 let mut lines = String::new();
-                for _ in 0..3 {
+                for _ in start_line..=err.span.end.line + 2 {
                     if let Some(line) = buf_lines.next() {
                         lines.push_str(line);
                         lines.push('\n');
@@ -464,7 +661,7 @@ async fn get_config(file_path: impl AsRef<Path>) -> Result<Config, CalcCmdError>
                 }
                 CalcCmdError::ConfigParse {
                     file_path: file_path.as_ref().display().to_string(),
-                    start_line,
+                    start_line: start_line,
                     lines,
                     err,
                 }

@@ -2,9 +2,6 @@
 members = [
     "calc-rates",
     "extract-cs",
-
-    "diagnostics",
-    "state-parse",
 ]
 resolver = "2"
 
@@ -23,8 +20,8 @@ rustnomial = { version = "0.3" }
 special = { version = "0.11" }
 ordered-float = { version = "5.1" }
 
-diagnostics = { path = "./diagnostics" }
-state-parse = { path = "./state-parse" }
+diagnostics = { git = "https://github.com/Noonicknames/diagnostics.git"}
+state-parse = { git = "https://github.com/Noonicknames/state-parse.git" }
 
 thiserror = { version = "2.0" }
 bitflags = { version = "2.10" }
@@ -35,7 +32,7 @@ colored = { version = "3.0" }
 unicode-width = { version = "0.2" }
 
 serde = { version = "1.0", default-features = false }
-ron = { version = "0.10" }
+ron = { version = "0.12" }
 
 tokio = { version = "1.48" }
 tokio-stream = { version = "0.1" }
@@ -44,7 +41,6 @@ futures = { version = "0.3", default-features = false }
 [profile.release]
 opt-level = "z"
 overflow-checks = false
-debug = 1
 panic = "unwind"
 lto = "fat"
 
