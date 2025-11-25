@@ -206,9 +206,6 @@ async fn process_result_set(
         rate_vec.push(result);
     }
 
-    println!("Grid(Ha): {:?}", grid_idx);
-    println!("Collision rates: {:?}", rate_vec);
-
     // Output results
     let mut data = Vec::new();
     writeln!(
@@ -256,7 +253,13 @@ fn auto_grid(
     idx_result.push(0);
     let mut grid_result = Vec::new();
 
-    let get_result = |istart: usize, iend: usize| -> (Grid<f64>, f64) {
+    let epsilon = 1e-8;
+    let perturbed_x_points = x_points
+        .iter()
+        .map(|&x| x * (1.0 + epsilon))
+        .collect::<Vec<_>>();
+
+    let get_result = |istart: usize, iend: usize, x_points: &[f64]| -> (Grid<f64>, f64) {
         let x_points_temp = DVector::from_vec(x_points[istart..=iend].to_vec());
         let start = x_points[istart];
         let x_range = x_points[iend] - x_points[istart];
@@ -275,30 +278,46 @@ fn auto_grid(
             break;
         }
         let max_degree = max_degree.min(x_points.len() - istart - 1);
-        let mut prev_result = get_result(istart, istart + 1);
+        let mut prev_result = get_result(istart, istart + 1, x_points);
 
         for degree in 2..=max_degree {
-            let result = get_result(istart, istart + degree);
-            let predicted_diff = get_result(istart + degree - 1, istart + degree).1;
-            let actual_diff = result.1 - prev_result.1;
-            let error_percent = actual_diff / predicted_diff * 100.0 - 100.0;
+            // Perturbing x positions, only checks if the rule is well behaved.
+            // Ineffective against detecting issues with resonances.
+            let result = get_result(istart, istart + degree, x_points);
+            let perturbed_result = get_result(istart, istart + degree, &perturbed_x_points);
 
-            println!(
-                "{}: {:.5} vs {:.5} (prev), predicted_diff {:.5}, actual_diff {:.5}, error: {}%",
+            let error = result.1 - perturbed_result.1;
+
+            println!( 
+                "{}: {:.5} vs {:.5} (perturbed), error: {} = {}%",
                 degree,
                 result.1,
-                prev_result.1,
-                predicted_diff,
-                actual_diff,
-                actual_diff / predicted_diff * 100.0 - 100.0
+                perturbed_result.1,
+                error,
+                error / result.1 * 100.0
             );
 
-            if error_percent.abs() > error_threshold(degree) || prev_result.1 < 0.0 {
-                println!("Degree {} unsatisfactory", degree);
-                idx_result.push(istart + degree - 1);
-                grid_result.push(prev_result.0);
-                continue 'outer;
-            }
+            // // Predicted difference, for a safer integration against resonances.
+            // let predicted_diff = get_result(istart + degree - 1, istart + degree, x_points).1;
+            // let actual_diff = result.1 - prev_result.1;
+            // let error_percent = actual_diff / predicted_diff * 100.0 - 100.0;
+
+            // println!(
+            //     "{}: {:.5} vs {:.5} (prev), predicted_diff {:.5}, actual_diff {:.5}, error: {}%",
+            //     degree,
+            //     result.1,
+            //     prev_result.1,
+            //     predicted_diff,
+            //     actual_diff,
+            //     actual_diff / predicted_diff * 100.0 - 100.0
+            // );
+
+            // if error_percent.abs() > error_threshold(degree) || prev_result.1 < 0.0 {
+            //     println!("Degree {} unsatisfactory", degree);
+            //     idx_result.push(istart + degree - 1);
+            //     grid_result.push(prev_result.0);
+            //     continue 'outer;
+            // }
 
             prev_result = result;
         }
