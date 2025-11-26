@@ -156,10 +156,12 @@ async fn process_result_set(
     let ResultSet {
         name,
         source,
-        grid,
+        mut grid,
         energy_units,
         cs_units,
     } = result_set;
+
+    grid.flatten(); // Flatten for ease
 
     let (energy_vec, cs_vec) = get_energy_cs(&source, energy_units, cs_units, &diagnostics).await?;
 
@@ -181,7 +183,7 @@ async fn process_result_set(
 
     for &temperature in temperatures.iter() {
         // Integrand according to Joel
-        // Atomic units kB = 1, T is in Kelvin, energy in hartree
+        // Atomic units kB = 1, T is converted to Hartree, energy in hartree
         let integrand = energy_vec
             .iter()
             .zip(cs_vec.iter())
@@ -254,10 +256,10 @@ fn auto_grid(
     let mut grid_result = Vec::new();
 
     let epsilon = 1e-8;
-    let perturbed_x_points = x_points
-        .iter()
-        .map(|&x| x * (1.0 + epsilon))
-        .collect::<Vec<_>>();
+    // let perturbed_x_points = x_points
+    //     .iter()
+    //     .map(|&x| x * (1.0 + epsilon))
+    //     .collect::<Vec<_>>();
 
     let get_result = |istart: usize, iend: usize, x_points: &[f64]| -> (Grid<f64>, f64) {
         let x_points_temp = DVector::from_vec(x_points[istart..=iend].to_vec());
@@ -284,40 +286,40 @@ fn auto_grid(
             // Perturbing x positions, only checks if the rule is well behaved.
             // Ineffective against detecting issues with resonances.
             let result = get_result(istart, istart + degree, x_points);
-            let perturbed_result = get_result(istart, istart + degree, &perturbed_x_points);
+            // let perturbed_result = get_result(istart, istart + degree, &perturbed_x_points);
 
-            let error = result.1 - perturbed_result.1;
-
-            println!( 
-                "{}: {:.5} vs {:.5} (perturbed), error: {} = {}%",
-                degree,
-                result.1,
-                perturbed_result.1,
-                error,
-                error / result.1 * 100.0
-            );
-
-            // // Predicted difference, for a safer integration against resonances.
-            // let predicted_diff = get_result(istart + degree - 1, istart + degree, x_points).1;
-            // let actual_diff = result.1 - prev_result.1;
-            // let error_percent = actual_diff / predicted_diff * 100.0 - 100.0;
+            // let error = result.1 - perturbed_result.1;
 
             // println!(
-            //     "{}: {:.5} vs {:.5} (prev), predicted_diff {:.5}, actual_diff {:.5}, error: {}%",
+            //     "{}: {:.5} vs {:.5} (perturbed), error: {} = {}%",
             //     degree,
             //     result.1,
-            //     prev_result.1,
-            //     predicted_diff,
-            //     actual_diff,
-            //     actual_diff / predicted_diff * 100.0 - 100.0
+            //     perturbed_result.1,
+            //     error,
+            //     error / result.1 * 100.0
             // );
 
-            // if error_percent.abs() > error_threshold(degree) || prev_result.1 < 0.0 {
-            //     println!("Degree {} unsatisfactory", degree);
-            //     idx_result.push(istart + degree - 1);
-            //     grid_result.push(prev_result.0);
-            //     continue 'outer;
-            // }
+            // // Predicted difference, for a safer integration against resonances.
+            let predicted_diff = get_result(istart + degree - 1, istart + degree, x_points).1;
+            let actual_diff = result.1 - prev_result.1;
+            let error_percent = actual_diff / predicted_diff * 100.0 - 100.0;
+
+            println!(
+                "{}: {:.5} vs {:.5} (prev), predicted_diff {:.5}, actual_diff {:.5}, error: {}%",
+                degree,
+                result.1,
+                prev_result.1,
+                predicted_diff,
+                actual_diff,
+                actual_diff / predicted_diff * 100.0 - 100.0
+            );
+
+            if error_percent.abs() > error_threshold(degree) || prev_result.1 < 0.0 {
+                println!("Degree {} unsatisfactory", degree);
+                idx_result.push(istart + degree - 1);
+                grid_result.push(prev_result.0);
+                continue 'outer;
+            }
 
             prev_result = result;
         }
@@ -359,6 +361,9 @@ fn resolve_grid(
                     break 'outer;
                 }
                 match grid {
+                    GridPoints::Repeat(..) => {
+                        panic!("Please only feed in flattened grids without repeats.")
+                    }
                     GridPoints::EnergyRange(range) => {
                         'inner: loop {
                             let Some(energy) = energy_vec.get(ptr) else {
@@ -667,7 +672,7 @@ async fn get_config(file_path: impl AsRef<Path>) -> Result<Config, CalcCmdError>
             .map(ConfigSerde::to_config)
             .map_err(|err| {
                 let mut buf_lines = buf.lines();
-                let start_line = err.span.start.line.checked_sub(2).unwrap_or(0) + 1;
+                let start_line = err.span.start.line.checked_sub(3).unwrap_or(0) + 1;
                 for _ in 0..start_line - 1 {
                     buf_lines.next();
                 }

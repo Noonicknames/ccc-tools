@@ -1,5 +1,27 @@
+// I should add functionality to output the integrands to check if a larger energy is required.
 (
     result_sets: [
+        (
+            name: "gridauto(test)",
+            source: "./test_out/ics.s2P.s2S",
+            grid: Auto,
+            energy_units: Auto,
+            cs_units: Auto,
+        ),
+        (
+            name: "gridauto(test2)",
+            source: "./test_out/ics.s2P.s2S",
+            grid: Manual([Repeat(PointsCount(3), 100)]),
+            energy_units: Auto,
+            cs_units: Auto,
+        ),
+        (
+            name: "gridauto(test3)",
+            source: "./test_out/ics.s2P.s2S",
+            grid: Manual([Repeat(PointsCount(3), 100)]),
+            energy_units: Auto,
+            cs_units: Auto,
+        ),
         (
             name: "gridauto",
             source: "./test_out/bound-states-3/ics.s2P.s2S",
@@ -10,32 +32,19 @@
         (
             name: "grid1",
             source: "./test_out/bound-states-3/ics.s2P.s2S",
-            grid: Manual([PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), PointsCount(2), ToEnd]),
+            grid: Manual([Repeat(PointsCount(3), 100)]),
             energy_units: Auto,
             cs_units: Auto,
         ),
         (
             name: "grid2",
             source: "./test_out/bound-states-3/ics.s2P.s2S",
-            grid: Manual([PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), PointsCount(3), ToEnd]),
+            grid: Manual([Repeat(PointsCount(2), 100)]),
             energy_units: Auto,
             cs_units: Auto,
         ),
-        // (
-        //     name: "grid3",
-        //     source: "./test_out/bound-states-3/ics.s2P.s2S",
-        //     grid: Manual([PointsCount(4), PointsCount(4), PointsCount(4), PointsCount(4), ToEnd]),
-        //     energy_units: Auto,
-        //     cs_units: Auto,
-        // ),
-        // (
-        //     name: "grid4",
-        //     source: "./test_out/bound-states-3/ics.s2P.s2S",
-        //     grid: Manual([PointsCount(10), ToEnd]),
-        //     energy_units: Auto,
-        //     cs_units: Auto,
-        // ),
     ],
+    // I should fix this to be more ergonomic.
     temperatures: [
         1.0,
         2.0,

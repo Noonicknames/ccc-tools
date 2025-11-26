@@ -98,8 +98,8 @@ impl TemperatureUnits {
     pub fn to_kelvin_factor(&self) -> f64 {
         match self {
             Self::Kelvin => 1.0,
-            Self::ElectronVolt => 1.0/8.6173e-5,
-            Self::Hartree => 1.0/3.1668e-6,
+            Self::ElectronVolt => 1.0 / 8.6173e-5,
+            Self::Hartree => 1.0 / 3.1668e-6,
         }
     }
 
@@ -260,8 +260,37 @@ pub enum GridConfig {
     Manual(Vec<GridPoints>),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl GridConfig {
+    pub fn flatten(&mut self) {
+        if let Self::Manual(current_grid) = self {
+            let mut temp_grid = Vec::new();
+
+            for grid_pts in current_grid.iter() {
+                match grid_pts {
+                    GridPoints::Repeat(grid_pts, n) => {
+                        let mut grid_pts = grid_pts.as_ref().clone();
+                        let mut n = *n;
+                        while let GridPoints::Repeat(grid_pts_inner, n_inner) = &grid_pts {
+                            n = *n_inner;
+                            grid_pts = grid_pts_inner.as_ref().clone();
+                        } 
+
+                        for _ in 0..n {
+                            temp_grid.push(grid_pts.clone());
+                        }
+                    }
+                    grid => temp_grid.push(grid.clone()),
+                }
+            }
+
+            *current_grid = temp_grid;
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum GridPoints {
+    Repeat(Box<GridPoints>, u32),
     EnergyRange(RangeInclusive<f64>),
     PointsCount(u32),
     ToEnd,
