@@ -67,28 +67,29 @@ where
         let weights = DVectorView::from_slice(self.weights.as_slice(), self.weights.len());
         weights.dot(&f_points)
     }
-    pub fn multi_combine(&self, other_grid: &Grid<T>) -> Grid<T> {
-        let points = &self.points;
-        let other_points = &other_grid.points;
-        let weights = &self.weights;
-        let other_weights = &other_grid.weights;
+    // // Disabled because nalgebra::stack introduced in nalgebra@0.33, MSRV is higher than 1.85
+    // pub fn multi_combine(&self, other_grid: &Grid<T>) -> Grid<T> {
+    //     let points = &self.points;
+    //     let other_points = &other_grid.points;
+    //     let weights = &self.weights;
+    //     let other_weights = &other_grid.weights;
 
-        let ones_vec_self = nalgebra::DVector::from_vec(vec![T::one(); points.shape().0]);
-        let ones_vec_other = nalgebra::DVector::from_vec(vec![T::one(); other_points.shape().0]);
+    //     let ones_vec_self = nalgebra::DVector::from_vec(vec![T::one(); points.shape().0]);
+    //     let ones_vec_other = nalgebra::DVector::from_vec(vec![T::one(); other_points.shape().0]);
 
-        let multi_points = nalgebra::stack![
-            ones_vec_other.kronecker(&points),
-            other_points.kronecker(&ones_vec_self)
-        ];
+    //     let multi_points = nalgebra::stack![
+    //         ones_vec_other.kronecker(&points),
+    //         other_points.kronecker(&ones_vec_self)
+    //     ];
 
-        let multi_weights = other_weights.kronecker(&weights);
+    //     let multi_weights = other_weights.kronecker(&weights);
 
-        let shape = multi_points.shape();
-        Grid {
-            weights: multi_weights,
-            points: multi_points.reshape_generic(Dyn(shape.0), Dyn(shape.1)),
-        }
-    }
+    //     let shape = multi_points.shape();
+    //     Grid {
+    //         weights: multi_weights,
+    //         points: multi_points.reshape_generic(Dyn(shape.0), Dyn(shape.1)),
+    //     }
+    // }
 }
 
 pub fn legendre_grid_roots(lapacke: &LapackeFunctions, n: usize) -> Grid<f64> {

@@ -25,8 +25,7 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     config::{
-        Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits, EnergyUnitsOrAuto, GridConfig,
-        GridPoints, ResultSet, TemperatureUnits,
+        CollisionRateUnits, Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits, EnergyUnitsOrAuto, IntGridConfig, IntGridPoints, ResultSet, TemperatureUnits
     },
     grid::{Grid, moment_fitted},
     util::ensure_folder_exists,
@@ -114,6 +113,7 @@ pub async fn cmd_calc(
         energy_units,
         cs_units,
         output_folder,
+        collision_rate_units
     } = get_config(path).await?;
 
     let temperatures = Arc::new(temperatures);
@@ -134,6 +134,7 @@ pub async fn cmd_calc(
             result_set,
             temperatures,
             temperature_units,
+            collision_rate_units,
             output_folder,
             diagnostics_copy,
         )
@@ -150,6 +151,7 @@ async fn process_result_set(
     result_set: ResultSet,
     temperatures: Arc<Vec<f64>>,
     temperature_units: TemperatureUnits,
+    rate_units: CollisionRateUnits,
     output_folder: Arc<PathBuf>,
     diagnostics: Arc<AsyncDiagnostics>,
 ) -> Result<(), std::io::Error> {
@@ -181,6 +183,8 @@ async fn process_result_set(
     let temp_conversion =
         TemperatureUnits::conversion_factor(temperature_units, TemperatureUnits::Hartree);
 
+    let rate_conversion = CollisionRateUnits::conversion_factor(CollisionRateUnits::Atomic, rate_units);
+
     for &temperature in temperatures.iter() {
         // Integrand according to Joel
         // Atomic units kB = 1, T is converted to Hartree, energy in hartree
@@ -205,6 +209,9 @@ async fn process_result_set(
             * std::f64::consts::PI.sqrt().recip()
             * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
 
+        // Convert to desired units
+        result = result * rate_conversion;
+
         rate_vec.push(result);
     }
 
@@ -212,11 +219,12 @@ async fn process_result_set(
     let mut data = Vec::new();
     writeln!(
         &mut data,
-        "# Rates for `{}`, in units of {}, cm^3s^-1",
+        "# Rates for `{}`, in units of {}, {}",
         name,
         temperature_units.as_str(),
+        rate_units.as_str(),
     )?;
-    write!(&mut data, "# Grid: [",)?;
+    write!(&mut data, "# Grid(Ha): [",)?;
 
     for i in 0..grid_idx.len() - 1 {
         write!(
@@ -333,12 +341,12 @@ fn auto_grid(
 fn resolve_grid(
     energy_vec: &[f64],
     cs_vec: &[f64],
-    grid: &GridConfig,
+    grid: &IntGridConfig,
     name: impl AsRef<str>,
     diagnostics: &Arc<AsyncDiagnostics>,
 ) -> (Vec<usize>, Vec<Grid<f64>>) {
     match grid {
-        GridConfig::Auto => {
+        IntGridConfig::Auto => {
             // Basically the normal integrand but no Maxwellian decay factor, should be the most unstable.
             let integrand = energy_vec
                 .iter()
@@ -352,7 +360,7 @@ fn resolve_grid(
 
             auto_grid(energy_vec, &integrand, error_threshold, max_degree)
         }
-        GridConfig::Manual(grid) => {
+        IntGridConfig::Manual(grid) => {
             let mut result = Vec::with_capacity(grid.len());
             let mut ptr = 0;
 
@@ -361,10 +369,10 @@ fn resolve_grid(
                     break 'outer;
                 }
                 match grid {
-                    GridPoints::Repeat(..) => {
+                    IntGridPoints::Repeat(..) => {
                         panic!("Please only feed in flattened grids without repeats.")
                     }
-                    GridPoints::EnergyRange(range) => {
+                    IntGridPoints::EnergyRange(range) => {
                         'inner: loop {
                             let Some(energy) = energy_vec.get(ptr) else {
                                 break 'outer;
@@ -397,13 +405,13 @@ fn resolve_grid(
                             ));
                         }
                     }
-                    GridPoints::PointsCount(0 | 1) => {
+                    IntGridPoints::PointsCount(0 | 1) => {
                         diagnostics.write_log_background(warn!(
                             "Grid entry {} (zero-indexed) for result set `{}` must have at least 2 or more points",
                             i, name.as_ref(),
                         ));
                     }
-                    GridPoints::PointsCount(n) => {
+                    IntGridPoints::PointsCount(n) => {
                         if result.is_empty() {
                             result.push(0);
                         }
@@ -413,7 +421,7 @@ fn resolve_grid(
                         ptr = *result.last().unwrap();
                     }
 
-                    GridPoints::ToEnd => {
+                    IntGridPoints::ToEnd => {
                         if result.is_empty() {
                             result.push(0);
                         }
@@ -477,7 +485,7 @@ async fn get_energy_cs(
                     diagnostics.write_log_background(warn!(
                         "No energy units found for file `{}`, assuming eV",
                         source.as_ref().display()
-                    ).with_sublog(info!("Units are deduced from instances of 'eV' or 'ha' in the first line of the file")));
+                    ).with_sublog(info!("Units are deduced from instances of 'eV' or 'Ha' in the first line of the file")));
 
                     EnergyUnits::ElectronVolt
                 }

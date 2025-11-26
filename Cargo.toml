@@ -14,7 +14,7 @@ readme = "README.md"
 
 
 [workspace.dependencies]
-nalgebra = { version = "0.34" }
+nalgebra = { version = "0.32" }
 la = { git = "https://github.com/Noonicknames/la.git" }
 rustnomial = { version = "0.3" }
 special = { version = "0.11" }

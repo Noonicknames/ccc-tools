@@ -2,9 +2,10 @@
 name = "calc-rates"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
 
 [dependencies]
-nalgebra = { workspace = true, features = ["serde", "serde-serialize"] }
+nalgebra = { workspace = true, features = ["serde", "serde-serialize", "macros"] }
 la.workspace = true
 rustnomial.workspace = true
 special.workspace = true

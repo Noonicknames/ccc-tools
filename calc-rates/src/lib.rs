@@ -6,7 +6,7 @@ use diagnostics::{
     diagnostics::{AsyncDiagnostics, ChannelAllow},
     error,
 };
-use la::{BlasLib, LapackeLib};
+// use la::{BlasLib, LapackeLib};
 use nalgebra::dvector;
 
 use crate::{
@@ -104,9 +104,9 @@ pub async fn async_run() -> Result<(), AppError> {
 }
 
 pub fn test() {
-    let blas_lib = BlasLib::new().unwrap();
-    let lapacke_lib = LapackeLib::new(&blas_lib).unwrap();
-    let lapacke = lapacke_lib.functions();
+    // let blas_lib = BlasLib::new().unwrap();
+    // let lapacke_lib = LapackeLib::new(&blas_lib).unwrap();
+    // let lapacke = lapacke_lib.functions();
 
     let x_points = dvector![0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0];
     let int_domain = (0.0, 8.0);
