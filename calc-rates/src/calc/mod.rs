@@ -510,9 +510,9 @@ fn resolve_grid(
                             ));
                         }
                     }
-                    IntGridPoints::PointsCount(0 | 1) => {
+                    IntGridPoints::PointsCount(0) => {
                         diagnostics.write_log_background(warn!(
-                            "Grid entry {} (zero-indexed) for result set `{}` must have at least 2 or more points",
+                            "Grid entry {} (zero-indexed) for result set `{}` must have at least 1 or more points",
                             i, name.as_ref(),
                         ));
                     }
@@ -521,7 +521,7 @@ fn resolve_grid(
                             result.push(0);
                         }
                         result.push(
-                            (*result.last().unwrap() + *n as usize - 1).min(energy_vec.len() - 1),
+                            (*result.last().unwrap() + *n as usize).min(energy_vec.len() - 1),
                         );
                         ptr = *result.last().unwrap();
                     }

@@ -1,45 +1,38 @@
-// I should add functionality to output the integrands to check if a larger energy is required.
 (
+    // Sets of results to extract
     result_sets: [
         (
-            name: "gridauto(test)",
+            name: "auto_grid",
             source: "./test_out/ics.s2P.s2S",
             grid: Auto,
             energy_units: Auto,
             cs_units: Auto,
         ),
         (
-            name: "gridauto(test2)",
+            name: "linear_grid",
+            source: "./test_out/ics.s2P.s2S",
+            grid: Manual([Repeat(PointsCount(1), 100)]),
+            energy_units: Auto,
+            cs_units: Auto,
+        ),
+        (
+            name: "quadratic_grid",
             source: "./test_out/ics.s2P.s2S",
             grid: Manual([Repeat(PointsCount(2), 100)]),
             energy_units: Auto,
             cs_units: Auto,
         ),
         (
-            name: "gridauto(test3)",
+            name: "cubic_grid",
             source: "./test_out/ics.s2P.s2S",
             grid: Manual([Repeat(PointsCount(3), 100)]),
             energy_units: Auto,
             cs_units: Auto,
         ),
         (
-            name: "gridauto",
-            source: "./test_out/bound-states-3/ics.s2P.s2S",
-            grid: Auto,
-            energy_units: Auto,
-            cs_units: Auto,
-        ),
-        (
-            name: "grid1",
-            source: "./test_out/bound-states-3/ics.s2P.s2S",
-            grid: Manual([Repeat(PointsCount(3), 100)]),
-            energy_units: Auto,
-            cs_units: Auto,
-        ),
-        (
-            name: "grid2",
-            source: "./test_out/bound-states-3/ics.s2P.s2S",
-            grid: Manual([Repeat(PointsCount(2), 100)]),
+            name: "weird_grid",
+            source: "./test_out/ics.s2P.s2S",
+            grid: Manual([PointsCount(1), PointsCount(2), PointsCount(3), PointsCount(4), PointsCount(5), PointsCount(6), PointsCount(7), PointsCount(8)]),
             energy_units: Auto,
             cs_units: Auto,
         ),
