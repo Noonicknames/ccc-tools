@@ -1,8 +1,5 @@
 [workspace]
-members = [
-    "calc-rates",
-    "extract-cs",
-]
+members = ["calc-rates", "extract-cs", "tester"]
 resolver = "2"
 
 [workspace.package]
@@ -20,7 +17,7 @@ rustnomial = { version = "0.3" }
 special = { version = "0.11" }
 ordered-float = { version = "5.1" }
 
-diagnostics = { git = "https://github.com/Noonicknames/diagnostics.git"}
+diagnostics = { git = "https://github.com/Noonicknames/diagnostics.git" }
 state-parse = { git = "https://github.com/Noonicknames/state-parse.git" }
 
 thiserror = { version = "2.0" }

@@ -1,0 +1,11 @@
+[package]
+name = "tester"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+
+[dependencies]
+# la.workspace = true
+nalgebra.workspace = true
