@@ -49,6 +49,7 @@
     ],
     temperature_units: ElectronVolt,
     output_folder: "./calc-rates-out",
+    output_integrands: true,
     // collision_rate_units: Atomic,
     collision_rate_units: CentimetreCubedPerSecond,
 )

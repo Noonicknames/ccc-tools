@@ -14,18 +14,20 @@ use diagnostics::{
     diagnostics::AsyncDiagnostics,
     error, info, warn,
 };
+use futures::stream::FuturesUnordered;
 use nalgebra::DVector;
 use ordered_float::OrderedFloat;
 use tokio::{
     fs::OpenOptions,
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
 };
 use tokio_stream::{StreamExt, wrappers::LinesStream};
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
     config::{
-        CollisionRateUnits, Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits, EnergyUnitsOrAuto, IntGridConfig, IntGridPoints, ResultSet, TemperatureUnits
+        CollisionRateUnits, Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits,
+        EnergyUnitsOrAuto, IntGridConfig, IntGridPoints, ResultSet, TemperatureUnits,
     },
     grid::{Grid, moment_fitted},
     util::ensure_folder_exists,
@@ -113,7 +115,8 @@ pub async fn cmd_calc(
         energy_units,
         cs_units,
         output_folder,
-        collision_rate_units
+        output_integrands,
+        collision_rate_units,
     } = get_config(path).await?;
 
     let temperatures = Arc::new(temperatures);
@@ -126,20 +129,26 @@ pub async fn cmd_calc(
         });
     }
 
+    let mut tasks = FuturesUnordered::new();
+
     for result_set in result_sets {
         let diagnostics_copy = Arc::clone(diagnostics);
         let temperatures = Arc::clone(&temperatures);
         let output_folder = Arc::clone(&output_folder);
-        if let Err(err) = process_result_set(
+
+        tasks.push(process_result_set(
             result_set,
             temperatures,
             temperature_units,
             collision_rate_units,
+            output_integrands,
             output_folder,
             diagnostics_copy,
-        )
-        .await
-        {
+        ));
+    }
+
+    while let Some(result) = tasks.next().await {
+        if let Err(err) = result {
             diagnostics.write_log_background(error!("Error whilst reading result set: {}", err));
         }
     }
@@ -152,6 +161,7 @@ async fn process_result_set(
     temperatures: Arc<Vec<f64>>,
     temperature_units: TemperatureUnits,
     rate_units: CollisionRateUnits,
+    output_integrands: bool,
     output_folder: Arc<PathBuf>,
     diagnostics: Arc<AsyncDiagnostics>,
 ) -> Result<(), std::io::Error> {
@@ -161,11 +171,86 @@ async fn process_result_set(
         mut grid,
         energy_units,
         cs_units,
+        output_integrands: set_output_integrands,
     } = result_set;
+    let name = Arc::new(name);
 
     grid.flatten(); // Flatten for ease
 
     let (energy_vec, cs_vec) = get_energy_cs(&source, energy_units, cs_units, &diagnostics).await?;
+    let energy_vec = Arc::new(energy_vec);
+
+    let output_integrands_data = if set_output_integrands.unwrap_or(output_integrands) {
+        let (send, mut recv) = tokio::sync::mpsc::unbounded_channel::<(f64, Vec<f64>)>();
+        let integrands_folder = output_folder.join(format!("{}.integrands", name));
+        let temperature_units = temperature_units.clone();
+        let diagnostics = Arc::clone(&diagnostics);
+        let energy_vec = Arc::clone(&energy_vec);
+        let name = Arc::clone(&name);
+        let task = tokio::task::spawn(async move {
+            ensure_folder_exists(&integrands_folder).await?;
+
+            let mut open_options = OpenOptions::new();
+            open_options.create(true).write(true).truncate(true);
+
+            let mut tasks = FuturesUnordered::new();
+
+            while let Some((temperature, integrand)) = recv.recv().await {
+                let mut buf = Vec::new();
+
+                writeln!(
+                    &mut buf,
+                    "# Integrand for `{}`, in units of Ha, a0^2Ha, with T={}{}",
+                    name,
+                    temperature,
+                    temperature_units.as_str()
+                )?;
+
+                for (energy, integrand) in energy_vec.iter().zip(integrand.iter()) {
+                    writeln!(&mut buf, "{} {:E}", energy, integrand)?;
+                }
+
+                let open_options = open_options.clone();
+                let file_name = integrands_folder.join(format!(
+                    "T={}{}",
+                    temperature,
+                    temperature_units.as_str()
+                ));
+                tasks.push(tokio::spawn(async move {
+                    let file = open_options.open(&file_name).await;
+                    let mut file = match file {
+                        Ok(file) => file,
+                        Err(err) => {
+                            return Err(err);
+                        }
+                    };
+                    file.write_all(&buf).await?;
+                    Ok::<(), std::io::Error>(())
+                }));
+            }
+
+            while let Some(result) = tasks.next().await {
+                match result {
+                    Ok(Ok(())) => (),
+                    Err(err) => {
+                        diagnostics.write_log_background(
+                            warn!("Error joining tokio task.").with_sublog(error!("{}", err)),
+                        );
+                    }
+                    Ok(Err(err)) => {
+                        diagnostics.write_log_background(
+                            warn!("Error occured while outputting integrands.")
+                                .with_sublog(error!("{}", err)),
+                        );
+                    }
+                }
+            }
+            Ok::<(), std::io::Error>(())
+        });
+        Some((task, send))
+    } else {
+        None
+    };
 
     if energy_vec.len() < 2 {
         diagnostics.write_log_background(warn!(
@@ -176,14 +261,16 @@ async fn process_result_set(
         return Ok(());
     }
 
-    let (grid_idx, grid_cache) = resolve_grid(&energy_vec, &cs_vec, &grid, &name, &diagnostics);
+    let (grid_idx, grid_cache) =
+        resolve_grid(&energy_vec, &cs_vec, &grid, name.as_ref(), &diagnostics);
 
     let mut rate_vec = Vec::with_capacity(temperatures.len());
 
     let temp_conversion =
         TemperatureUnits::conversion_factor(temperature_units, TemperatureUnits::Hartree);
 
-    let rate_conversion = CollisionRateUnits::conversion_factor(CollisionRateUnits::Atomic, rate_units);
+    let rate_conversion =
+        CollisionRateUnits::conversion_factor(CollisionRateUnits::Atomic, rate_units);
 
     for &temperature in temperatures.iter() {
         // Integrand according to Joel
@@ -213,6 +300,15 @@ async fn process_result_set(
         result = result * rate_conversion;
 
         rate_vec.push(result);
+
+        if let Some((_, send)) = &output_integrands_data {
+            if let Err(err) = send.send((temperature, integrand)) {
+                diagnostics.write_log_background(
+                    warn!("Failed to send integrand across channel.")
+                        .with_sublog(error!("{}", err)),
+                );
+            }
+        }
     }
 
     // Output results
@@ -224,7 +320,7 @@ async fn process_result_set(
         temperature_units.as_str(),
         rate_units.as_str(),
     )?;
-    write!(&mut data, "# Grid(Ha): [",)?;
+    write!(&mut data, "# Integration Grid(Ha): [",)?;
 
     for i in 0..grid_idx.len() - 1 {
         write!(
@@ -245,10 +341,19 @@ async fn process_result_set(
         .create(true)
         .write(true)
         .truncate(true)
-        .open(output_folder.join(&name))
+        .open(output_folder.join(name.as_ref()))
         .await?;
 
     file.write_all(&data).await?;
+
+    if let Some((task, send)) = output_integrands_data {
+        drop(send);
+        if let Err(err) = task.await {
+            diagnostics.write_log_background(
+                warn!("Failed to join tokio task").with_sublog(error!("{}", err)),
+            );
+        }
+    }
 
     Ok(())
 }
@@ -263,7 +368,7 @@ fn auto_grid(
     idx_result.push(0);
     let mut grid_result = Vec::new();
 
-    let epsilon = 1e-8;
+    // let epsilon = 1e-8;
     // let perturbed_x_points = x_points
     //     .iter()
     //     .map(|&x| x * (1.0 + epsilon))
@@ -312,18 +417,18 @@ fn auto_grid(
             let actual_diff = result.1 - prev_result.1;
             let error_percent = actual_diff / predicted_diff * 100.0 - 100.0;
 
-            println!(
-                "{}: {:.5} vs {:.5} (prev), predicted_diff {:.5}, actual_diff {:.5}, error: {}%",
-                degree,
-                result.1,
-                prev_result.1,
-                predicted_diff,
-                actual_diff,
-                actual_diff / predicted_diff * 100.0 - 100.0
-            );
+            // println!(
+            //     "{}: {:.5} vs {:.5} (prev), predicted_diff {:.5}, actual_diff {:.5}, error: {}%",
+            //     degree,
+            //     result.1,
+            //     prev_result.1,
+            //     predicted_diff,
+            //     actual_diff,
+            //     actual_diff / predicted_diff * 100.0 - 100.0
+            // );
 
             if error_percent.abs() > error_threshold(degree) || prev_result.1 < 0.0 {
-                println!("Degree {} unsatisfactory", degree);
+                // println!("Degree {} unsatisfactory", degree);
                 idx_result.push(istart + degree - 1);
                 grid_result.push(prev_result.0);
                 continue 'outer;
@@ -331,7 +436,7 @@ fn auto_grid(
 
             prev_result = result;
         }
-        println!("All satisfactory, pushing maximum");
+        // println!("All satisfactory, pushing maximum");
         idx_result.push(istart + max_degree);
         grid_result.push(prev_result.0);
     }
@@ -356,7 +461,7 @@ fn resolve_grid(
 
             let error_threshold = |deg| 10.0 / (deg as f64 + 1.0).ln();
 
-            let max_degree = 4;
+            let max_degree = 5;
 
             auto_grid(energy_vec, &integrand, error_threshold, max_degree)
         }

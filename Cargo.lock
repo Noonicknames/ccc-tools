@@ -100,6 +100,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "diagnostics",
+ "futures",
  "la",
  "nalgebra",
  "ordered-float",

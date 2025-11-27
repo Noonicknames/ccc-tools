@@ -5,14 +5,23 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ConfigSerde {
     pub result_sets: Vec<ResultSet>,
+    /// Temperatures to calculate collision rates for.
     pub temperatures: Vec<TemperatureGridPoints>,
+    /// Units for temperatures in `temperatures` field.
     pub temperature_units: TemperatureUnits,
+    /// Default behaviour for outputting integrands if unspecified in a result set.
+    #[serde(default)]
+    pub output_integrands: bool,
+    /// Default energy unit to assume a file is in.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub energy_units: Option<EnergyUnitsOrAuto>,
+    /// Default cross section unit to assume a file is in.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cs_units: Option<CsUnitsOrAuto>,
+    /// Folder to write results to.
     #[serde(default = "default_output_folder")]
     pub output_folder: String,
+    /// Units for collision rate to output.
     pub collision_rate_units: CollisionRateUnits,
 }
 
@@ -30,6 +39,7 @@ impl ConfigSerde {
                     grid: IntGridConfig::Auto,
                     cs_units: CsUnitsOrAuto::Auto,
                     energy_units: EnergyUnitsOrAuto::Auto,
+                    output_integrands: None,
                 },
                 ResultSet {
                     name: "s2P<-s2S(manual)".to_owned(),
@@ -37,8 +47,10 @@ impl ConfigSerde {
                     grid: IntGridConfig::Manual(vec![]),
                     cs_units: CsUnitsOrAuto::Atomic,
                     energy_units: EnergyUnitsOrAuto::ElectronVolt,
+                    output_integrands: None,
                 },
             ],
+            output_integrands: false,
             temperatures: vec![TemperatureGridPoints::Direct(vec![1.0, 2.0, 3.0, 4.0, 5.0])],
             temperature_units: TemperatureUnits::ElectronVolt,
             energy_units: None,
@@ -56,6 +68,7 @@ impl ConfigSerde {
             energy_units: self.energy_units.unwrap_or(EnergyUnitsOrAuto::Auto),
             cs_units: self.cs_units.unwrap_or(CsUnitsOrAuto::Auto),
             output_folder: self.output_folder,
+            output_integrands: self.output_integrands,
             collision_rate_units: self.collision_rate_units,
         }
     }
@@ -68,6 +81,7 @@ pub struct Config {
     pub temperature_units: TemperatureUnits,
     pub energy_units: EnergyUnitsOrAuto,
     pub cs_units: CsUnitsOrAuto,
+    pub output_integrands: bool,
     pub output_folder: String,
     pub collision_rate_units: CollisionRateUnits,
 }
@@ -298,6 +312,8 @@ pub struct ResultSet {
     pub grid: IntGridConfig,
     pub energy_units: EnergyUnitsOrAuto,
     pub cs_units: CsUnitsOrAuto,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_integrands: Option<bool>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
