@@ -307,7 +307,7 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 [[package]]
 name = "la"
 version = "0.1.0"
-source = "git+https://github.com/Noonicknames/la.git#0093b1897e04fb068b1f3a97f82d91b0b83766fd"
+source = "git+https://github.com/Noonicknames/la.git#fe56edc160b2068c14eee3cfc10921302c8cb718"
 dependencies = [
  "cblas-sys",
  "cfg-if",
@@ -667,6 +667,7 @@ dependencies = [
 name = "tester"
 version = "0.1.0"
 dependencies = [
+ "la",
  "nalgebra",
 ]
 
