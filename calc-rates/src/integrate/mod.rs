@@ -227,8 +227,6 @@ impl<'a> NaturalCubicInterpolation<'a> {
                 let (c0, c1, c2, c3) = self.coefficients(idx);
                 let x_scaled = relative_x / self.widths[idx];
 
-                // println!("{}", x_scaled);
-
                 assert!((0.0..=1.0).contains(&x_scaled));
 
                 *x = c0 * h00(x_scaled)
@@ -337,7 +335,6 @@ impl GaussIntegrator {
                 let error_percent = actual_diff / predicted_diff * 100.0 - 100.0;
 
                 if error_percent.abs() > error_threshold(degree) || prev_val < 0.0 {
-                    println!("{}..{}", istart, istart + degree);
                     result.push(istart..istart + degree, prev_integrator);
                     prev_idx = istart + degree - 1;
                     continue 'outer;
@@ -347,7 +344,6 @@ impl GaussIntegrator {
                 prev_val = val;
             }
 
-            println!("{}..{}", istart, istart + max_degree + 1);
             result.push(istart..istart + max_degree + 1, prev_integrator);
             prev_idx = istart + max_degree;
         }
