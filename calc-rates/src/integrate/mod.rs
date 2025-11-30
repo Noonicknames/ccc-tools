@@ -281,7 +281,7 @@ impl Integrator for GaussIntegrator {
 
 impl GaussIntegrator {
     pub fn new(xs: &[f64]) -> Self {
-        if xs.len() < 1 {
+        if xs.len() < 2 {
             return Self {
                 grid: Grid {
                     points: DMatrix::zeros(0, 0),
@@ -300,60 +300,60 @@ impl GaussIntegrator {
 
         Self { grid }
     }
-}
 
-pub fn auto_grid(
-    x_points: &[f64],
-    integrand: &[f64],
-    mut error_threshold: impl FnMut(usize) -> f64,
-    max_degree: usize,
-) -> (Vec<usize>, Vec<Grid<f64>>) {
-    let mut idx_result = Vec::new();
-    idx_result.push(0);
-    let mut grid_result = Vec::new();
+    pub fn is_empty(&self) -> bool {
+        self.grid.points.is_empty()
+    }
+    pub fn auto(
+        x_points: &[f64],
+        integrand: &[f64],
+        mut error_threshold: impl FnMut(usize) -> f64,
+        max_degree: usize,
+    ) -> SubIntegrators {
+        let mut result = SubIntegrators::new();
 
-    let get_result = |istart: usize, iend: usize, x_points: &[f64]| -> (Grid<f64>, f64) {
-        let x_points_temp = DVector::from_vec(x_points[istart..=iend].to_vec());
-        let start = x_points[istart];
-        let x_range = x_points[iend] - x_points[istart];
+        let get_result = |istart: usize, iend: usize, x_points: &[f64]| -> (GaussIntegrator, f64) {
+            let mut grid = GaussIntegrator::new(&x_points[istart..=iend]);
+            let val = grid.integrate(&integrand[istart..=iend]);
+            (grid, val)
+        };
 
-        let scaled_x_points = &x_points_temp.add_scalar(-start) / x_range;
-        let mut grid = moment_fitted(scaled_x_points.as_slice(), |i| 1.0 / (i + 1) as f64);
-        grid.scale_x(x_range);
-        grid.translate(&DVector::from_vec(vec![start])).unwrap();
-        let val = grid.eval(&integrand[istart..=iend]);
-        (grid, val)
-    };
+        let mut prev_idx = 0;
 
-    'outer: loop {
-        let istart = *idx_result.last().unwrap();
-        if istart == x_points.len() - 1 {
-            break;
-        }
-        let max_degree = max_degree.min(x_points.len() - istart - 1);
-        let mut prev_result = get_result(istart, istart + 1, x_points);
+        'outer: loop {
+            let istart = prev_idx;
+            if istart == x_points.len() - 1 {
+                break 'outer;
+            }
+            let max_degree = max_degree.min(x_points.len() - istart - 1);
+            let (mut prev_integrator, mut prev_val) = get_result(istart, istart + 1, x_points);
 
-        for degree in 2..=max_degree {
-            let result = get_result(istart, istart + degree, x_points);
+            for degree in 2..=max_degree {
+                let (integrator, val) = get_result(istart, istart + degree, x_points);
 
-            // Predicted difference, for a safer integration against resonances.
-            let predicted_diff = get_result(istart + degree - 1, istart + degree, x_points).1;
-            let actual_diff = result.1 - prev_result.1;
-            let error_percent = actual_diff / predicted_diff * 100.0 - 100.0;
+                // Predicted difference, for a safer integration against resonances.
+                let predicted_diff = get_result(istart + degree - 1, istart + degree, x_points).1;
+                let actual_diff = val - prev_val;
+                let error_percent = actual_diff / predicted_diff * 100.0 - 100.0;
 
-            if error_percent.abs() > error_threshold(degree) || prev_result.1 < 0.0 {
-                idx_result.push(istart + degree - 1);
-                grid_result.push(prev_result.0);
-                continue 'outer;
+                if error_percent.abs() > error_threshold(degree) || prev_val < 0.0 {
+                    println!("{}..{}", istart, istart + degree);
+                    result.push(istart..istart + degree, prev_integrator);
+                    prev_idx = istart + degree - 1;
+                    continue 'outer;
+                }
+
+                prev_integrator = integrator;
+                prev_val = val;
             }
 
-            prev_result = result;
+            println!("{}..{}", istart, istart + max_degree + 1);
+            result.push(istart..istart + max_degree + 1, prev_integrator);
+            prev_idx = istart + max_degree;
         }
 
-        idx_result.push(istart + max_degree);
-        grid_result.push(prev_result.0);
+        result
     }
-    (idx_result, grid_result)
 }
 
 #[cfg(test)]

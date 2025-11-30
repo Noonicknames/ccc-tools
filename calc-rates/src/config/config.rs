@@ -135,7 +135,7 @@ impl IntegrationGridPoints {
     pub fn kind(&self) -> IntegrationKind {
         match self {
             Self::AutoGauss(..) => IntegrationKind::AutoGauss,
-            Self::Gauss(..) => IntegrationKind::AutoGauss,
+            Self::Gauss(..) => IntegrationKind::Gauss,
             Self::NaturalCubic(..) => IntegrationKind::NaturalCubic,
             Self::Repeat(inner, ..) => inner.kind(),
         }
@@ -274,10 +274,10 @@ pub fn integration_grid_to_points(
     for grid_pts in IntegrationGridPoints::flat_iter(grid) {
         let kind = grid_pts.kind();
         let range = grid_pts.try_range(ptr..points_count).unwrap();
-        ptr = range.end;
+        ptr = range.end - 1;
 
         result.push((kind, range));
-        if ptr == points_count {
+        if ptr == points_count - 1 {
             break;
         }
     }

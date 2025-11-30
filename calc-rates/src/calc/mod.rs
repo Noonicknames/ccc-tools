@@ -201,7 +201,9 @@ async fn process_result_set(
             let energy_range =
                 energy_vec.first().cloned().unwrap()..energy_vec.last().cloned().unwrap();
             let dense_x_grid = (0..=3000)
-                .map(|i| i as f64 / 3000.0 * (energy_range.end - energy_range.start) + energy_range.start)
+                .map(|i| {
+                    i as f64 / 3000.0 * (energy_range.end - energy_range.start) + energy_range.start
+                })
                 .collect::<Vec<_>>();
 
             while let Some((temperature, integrand)) = recv.recv().await {
@@ -279,7 +281,22 @@ async fn process_result_set(
     let mut grid = integration_grid_to_points(&grid, energy_vec.len())
         .into_iter()
         .map(|(kind, range)| match kind {
-            IntegrationKind::AutoGauss => todo!(),
+            IntegrationKind::AutoGauss => {
+                let integrand = energy_vec
+                    .iter()
+                    .zip(cs_vec.iter())
+                    .map(|(&energy, &cs)| cs * energy)
+                    .collect::<Vec<_>>();
+                (
+                    range.clone(),
+                    Box::new(GaussIntegrator::auto(
+                        &energy_vec[range],
+                        &integrand,
+                        |x| 10.0 / (x as f64 + 1.0).ln(),
+                        5,
+                    )) as Box<dyn Integrator>,
+                )
+            }
             IntegrationKind::NaturalCubic => (
                 range.clone(),
                 Box::new(NaturalCubicIntegrator::new(

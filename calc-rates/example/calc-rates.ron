@@ -2,37 +2,23 @@
     // Sets of results to extract
     result_sets: [
         (
-            name: "auto_grid",
+            name: "cubic_spline",
             source: "./test_out/ics.s2P.s2S",
             grid: [NaturalCubic("..")],
             energy_units: Auto,
             cs_units: Auto,
         ),
         (
-            name: "linear_grid",
+            name: "auto_gauss",
             source: "./test_out/ics.s2P.s2S",
-            grid: [NaturalCubic("..")],
+            grid: [AutoGauss("..")],
             energy_units: Auto,
             cs_units: Auto,
         ),
         (
-            name: "quadratic_grid",
+            name: "linear",
             source: "./test_out/ics.s2P.s2S",
-            grid: [NaturalCubic("..")],
-            energy_units: Auto,
-            cs_units: Auto,
-        ),
-        (
-            name: "cubic_grid",
-            source: "./test_out/ics.s2P.s2S",
-            grid: [NaturalCubic("..")],
-            energy_units: Auto,
-            cs_units: Auto,
-        ),
-        (
-            name: "weird_grid",
-            source: "./test_out/ics.s2P.s2S",
-            grid: [NaturalCubic("..")],
+            grid: [Repeat(Gauss("2"), 100)],
             energy_units: Auto,
             cs_units: Auto,
         ),
