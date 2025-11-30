@@ -308,7 +308,7 @@ pub fn golub_welsch(
         &mut eigs,
         &mut isuppz,
         Some(&mut z),
-    );
+    ).unwrap();
 
     // Page 143 Numerical Methods For Special Functions by Amparo Gill to calculate weights.
     let weights = z.row(0).transpose().apply_into(|x| *x = (*x) * (*x)) * mu;

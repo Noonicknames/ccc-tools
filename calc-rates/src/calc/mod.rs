@@ -15,7 +15,7 @@ use diagnostics::{
     error, info, warn,
 };
 use futures::stream::FuturesUnordered;
-use nalgebra::DVector;
+use la::{BlasLib, LapackeLib};
 use ordered_float::OrderedFloat;
 use tokio::{
     fs::OpenOptions,
@@ -27,9 +27,11 @@ use unicode_width::UnicodeWidthStr;
 use crate::{
     config::{
         CollisionRateUnits, Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits,
-        EnergyUnitsOrAuto, IntGridConfig, IntGridPoints, ResultSet, TemperatureUnits,
+        EnergyUnitsOrAuto, ResultSet, TemperatureUnits, integration_grid_to_points,
     },
-    grid::{Grid, moment_fitted},
+    integrate::{
+        GaussIntegrator, IntegrationKind, Integrator, NaturalCubicIntegrator, SubIntegrators,
+    },
     util::ensure_folder_exists,
 };
 
@@ -115,7 +117,6 @@ pub async fn cmd_calc(
         energy_units,
         cs_units,
         output_folder,
-        output_integrands,
         collision_rate_units,
     } = get_config(path).await?;
 
@@ -141,7 +142,6 @@ pub async fn cmd_calc(
             temperatures,
             temperature_units,
             collision_rate_units,
-            output_integrands,
             output_folder,
             diagnostics_copy,
         ));
@@ -161,32 +161,33 @@ async fn process_result_set(
     temperatures: Arc<Vec<f64>>,
     temperature_units: TemperatureUnits,
     rate_units: CollisionRateUnits,
-    output_integrands: bool,
     output_folder: Arc<PathBuf>,
     diagnostics: Arc<AsyncDiagnostics>,
 ) -> Result<(), std::io::Error> {
     let ResultSet {
         name,
         source,
-        mut grid,
+        grid,
         energy_units,
         cs_units,
-        output_integrands: set_output_integrands,
+        output_integrands,
     } = result_set;
     let name = Arc::new(name);
-
-    grid.flatten(); // Flatten for ease
 
     let (energy_vec, cs_vec) = get_energy_cs(&source, energy_units, cs_units, &diagnostics).await?;
     let energy_vec = Arc::new(energy_vec);
 
-    let output_integrands_data = if set_output_integrands.unwrap_or(output_integrands) {
+    let blas_lib = BlasLib::new().unwrap();
+    let lapacke_lib = LapackeLib::new(&blas_lib).unwrap();
+
+    let output_integrands_data = if output_integrands {
         let (send, mut recv) = tokio::sync::mpsc::unbounded_channel::<(f64, Vec<f64>)>();
         let integrands_folder = output_folder.join(format!("{}.integrands", name));
         let temperature_units = temperature_units.clone();
         let diagnostics = Arc::clone(&diagnostics);
         let energy_vec = Arc::clone(&energy_vec);
         let name = Arc::clone(&name);
+        let lapacke_lib = lapacke_lib.clone();
         let task = tokio::task::spawn(async move {
             ensure_folder_exists(&integrands_folder).await?;
 
@@ -195,7 +196,21 @@ async fn process_result_set(
 
             let mut tasks = FuturesUnordered::new();
 
+            let mut integrator =
+                NaturalCubicIntegrator::new(&energy_vec, lapacke_lib.functions_static());
+            let energy_range =
+                energy_vec.first().cloned().unwrap()..energy_vec.last().cloned().unwrap();
+            let dense_x_grid = (0..=3000)
+                .map(|i| i as f64 / 3000.0 * (energy_range.end - energy_range.start) + energy_range.start)
+                .collect::<Vec<_>>();
+
             while let Some((temperature, integrand)) = recv.recv().await {
+                let mut x_grid = dense_x_grid.clone();
+                let interpolation = integrator.interpolation(&integrand);
+
+                interpolation.eval_many(&mut x_grid);
+                let integrand_interpolated = x_grid;
+
                 let mut buf = Vec::new();
 
                 writeln!(
@@ -206,7 +221,7 @@ async fn process_result_set(
                     temperature_units.as_str()
                 )?;
 
-                for (energy, integrand) in energy_vec.iter().zip(integrand.iter()) {
+                for (energy, integrand) in dense_x_grid.iter().zip(integrand_interpolated.iter()) {
                     writeln!(&mut buf, "{} {:E}", energy, integrand)?;
                 }
 
@@ -256,13 +271,37 @@ async fn process_result_set(
         diagnostics.write_log_background(warn!(
             "At least 2 cross sections are required, only {} found in `{}`",
             energy_vec.len(),
-            source
+            source.display(),
         ));
         return Ok(());
     }
 
-    let (grid_idx, grid_cache) =
-        resolve_grid(&energy_vec, &cs_vec, &grid, name.as_ref(), &diagnostics);
+    let mut grid = integration_grid_to_points(&grid, energy_vec.len())
+        .into_iter()
+        .map(|(kind, range)| match kind {
+            IntegrationKind::AutoGauss => todo!(),
+            IntegrationKind::NaturalCubic => (
+                range.clone(),
+                Box::new(NaturalCubicIntegrator::new(
+                    &energy_vec[range],
+                    lapacke_lib.functions_static(),
+                )) as Box<dyn Integrator>,
+            ),
+            IntegrationKind::Gauss => (
+                range.clone(),
+                Box::new(GaussIntegrator::new(&energy_vec[range])) as Box<dyn Integrator>,
+            ),
+        })
+        .fold(
+            SubIntegrators::new(),
+            |mut acc, (range, partial_integrator)| {
+                acc.push_boxed(range, partial_integrator);
+                acc
+            },
+        );
+
+    // let (grid_idx, grid_cache) =
+    //     resolve_grid(&energy_vec, &cs_vec, &grid, name.as_ref(), &diagnostics);
 
     let mut rate_vec = Vec::with_capacity(temperatures.len());
 
@@ -281,15 +320,7 @@ async fn process_result_set(
             .map(|(&energy, &cs)| cs * energy * (-energy / (temperature * temp_conversion)).exp())
             .collect::<Vec<_>>();
 
-        let mut result = 0.0;
-
-        for (window, grid) in grid_idx.windows(2).zip(grid_cache.iter()) {
-            let &[istart, iend] = window else {
-                unreachable!()
-            };
-
-            result += grid.eval(&integrand[istart..=iend]);
-        }
+        let mut result = grid.integrate(&integrand);
 
         // Factor in front
         result = result
@@ -320,18 +351,6 @@ async fn process_result_set(
         temperature_units.as_str(),
         rate_units.as_str(),
     )?;
-    write!(&mut data, "# Integration Grid(Ha): [",)?;
-
-    for i in 0..grid_idx.len() - 1 {
-        write!(
-            &mut data,
-            "{:.3}-{:.3}({}pt),",
-            energy_vec[grid_idx[i]],
-            energy_vec[grid_idx[i + 1]],
-            grid_idx[i + 1] - grid_idx[i] + 1
-        )?;
-    }
-    write!(&mut data, "]\n")?;
 
     for (temperature, rate) in temperatures.iter().zip(rate_vec.iter()) {
         writeln!(&mut data, "{} {:E}", temperature, rate)?;
@@ -356,211 +375,6 @@ async fn process_result_set(
     }
 
     Ok(())
-}
-
-fn auto_grid(
-    x_points: &[f64],
-    integrand: &[f64],
-    mut error_threshold: impl FnMut(usize) -> f64,
-    max_degree: usize,
-) -> (Vec<usize>, Vec<Grid<f64>>) {
-    let mut idx_result = Vec::new();
-    idx_result.push(0);
-    let mut grid_result = Vec::new();
-
-    // let epsilon = 1e-8;
-    // let perturbed_x_points = x_points
-    //     .iter()
-    //     .map(|&x| x * (1.0 + epsilon))
-    //     .collect::<Vec<_>>();
-
-    let get_result = |istart: usize, iend: usize, x_points: &[f64]| -> (Grid<f64>, f64) {
-        let x_points_temp = DVector::from_vec(x_points[istart..=iend].to_vec());
-        let start = x_points[istart];
-        let x_range = x_points[iend] - x_points[istart];
-
-        let scaled_x_points = &x_points_temp.add_scalar(-start) / x_range;
-        let mut grid = moment_fitted(scaled_x_points.as_slice(), |i| 1.0 / (i + 1) as f64);
-        grid.scale_x(x_range);
-        grid.translate(&DVector::from_vec(vec![start])).unwrap();
-        let val = grid.eval(&integrand[istart..=iend]);
-        (grid, val)
-    };
-
-    'outer: loop {
-        let istart = *idx_result.last().unwrap();
-        if istart == x_points.len() - 1 {
-            break;
-        }
-        let max_degree = max_degree.min(x_points.len() - istart - 1);
-        let mut prev_result = get_result(istart, istart + 1, x_points);
-
-        for degree in 2..=max_degree {
-            // Perturbing x positions, only checks if the rule is well behaved.
-            // Ineffective against detecting issues with resonances.
-            let result = get_result(istart, istart + degree, x_points);
-            // let perturbed_result = get_result(istart, istart + degree, &perturbed_x_points);
-
-            // let error = result.1 - perturbed_result.1;
-
-            // println!(
-            //     "{}: {:.5} vs {:.5} (perturbed), error: {} = {}%",
-            //     degree,
-            //     result.1,
-            //     perturbed_result.1,
-            //     error,
-            //     error / result.1 * 100.0
-            // );
-
-            // // Predicted difference, for a safer integration against resonances.
-            let predicted_diff = get_result(istart + degree - 1, istart + degree, x_points).1;
-            let actual_diff = result.1 - prev_result.1;
-            let error_percent = actual_diff / predicted_diff * 100.0 - 100.0;
-
-            // println!(
-            //     "{}: {:.5} vs {:.5} (prev), predicted_diff {:.5}, actual_diff {:.5}, error: {}%",
-            //     degree,
-            //     result.1,
-            //     prev_result.1,
-            //     predicted_diff,
-            //     actual_diff,
-            //     actual_diff / predicted_diff * 100.0 - 100.0
-            // );
-
-            if error_percent.abs() > error_threshold(degree) || prev_result.1 < 0.0 {
-                // println!("Degree {} unsatisfactory", degree);
-                idx_result.push(istart + degree - 1);
-                grid_result.push(prev_result.0);
-                continue 'outer;
-            }
-
-            prev_result = result;
-        }
-        // println!("All satisfactory, pushing maximum");
-        idx_result.push(istart + max_degree);
-        grid_result.push(prev_result.0);
-    }
-    (idx_result, grid_result)
-}
-
-fn resolve_grid(
-    energy_vec: &[f64],
-    cs_vec: &[f64],
-    grid: &IntGridConfig,
-    name: impl AsRef<str>,
-    diagnostics: &Arc<AsyncDiagnostics>,
-) -> (Vec<usize>, Vec<Grid<f64>>) {
-    match grid {
-        IntGridConfig::Auto => {
-            // Basically the normal integrand but no Maxwellian decay factor, should be the most unstable.
-            let integrand = energy_vec
-                .iter()
-                .zip(cs_vec.iter())
-                .map(|(&energy, &cs)| energy * cs)
-                .collect::<Vec<_>>();
-
-            let error_threshold = |deg| 10.0 / (deg as f64 + 1.0).ln();
-
-            let max_degree = 5;
-
-            auto_grid(energy_vec, &integrand, error_threshold, max_degree)
-        }
-        IntGridConfig::Manual(grid) => {
-            let mut result = Vec::with_capacity(grid.len());
-            let mut ptr = 0;
-
-            'outer: for (i, grid) in grid.into_iter().enumerate() {
-                if ptr >= energy_vec.len() - 1 {
-                    break 'outer;
-                }
-                match grid {
-                    IntGridPoints::Repeat(..) => {
-                        panic!("Please only feed in flattened grids without repeats.")
-                    }
-                    IntGridPoints::EnergyRange(range) => {
-                        'inner: loop {
-                            let Some(energy) = energy_vec.get(ptr) else {
-                                break 'outer;
-                            };
-                            if energy >= range.start() {
-                                break 'inner;
-                            }
-                            ptr += 1;
-                        }
-                        let start = ptr;
-
-                        'inner: loop {
-                            let Some(energy) = energy_vec.get(ptr) else {
-                                ptr -= 1; // the start must exist so ptr >= 1
-                                break 'inner;
-                            };
-                            if energy >= range.end() {
-                                break 'inner;
-                            }
-                            ptr += 1;
-                        }
-                        if ptr > start {
-                            result.push(start);
-                            result.push(ptr);
-                        } else {
-                            diagnostics.write_log_background(warn!(
-                                "Grid entry {} (zero-indexed) is empty for result set `{}`",
-                                i,
-                                name.as_ref(),
-                            ));
-                        }
-                    }
-                    IntGridPoints::PointsCount(0) => {
-                        diagnostics.write_log_background(warn!(
-                            "Grid entry {} (zero-indexed) for result set `{}` must have at least 1 or more points",
-                            i, name.as_ref(),
-                        ));
-                    }
-                    IntGridPoints::PointsCount(n) => {
-                        if result.is_empty() {
-                            result.push(0);
-                        }
-                        result.push(
-                            (*result.last().unwrap() + *n as usize).min(energy_vec.len() - 1),
-                        );
-                        ptr = *result.last().unwrap();
-                    }
-
-                    IntGridPoints::ToEnd => {
-                        if result.is_empty() {
-                            result.push(0);
-                        }
-                        result.push(energy_vec.len() - 1);
-                        ptr = *result.last().unwrap();
-                        ptr = *result.last().unwrap();
-                    }
-                }
-            }
-
-            let grid_result = result
-                .windows(2)
-                .map(|window| {
-                    let &[istart, iend] = window else {
-                        unreachable!()
-                    };
-
-                    let x_points = DVector::from_vec(energy_vec[istart..=iend].to_vec());
-                    let start = energy_vec[istart];
-                    let x_range = energy_vec[iend] - energy_vec[istart];
-
-                    let scaled_x_points = &x_points.add_scalar(-start) / x_range;
-
-                    // Integrating from 0.0 to 1.0
-                    let mut grid =
-                        moment_fitted(scaled_x_points.as_slice(), |i| 1.0 / (i + 1) as f64);
-                    grid.scale_x(x_range);
-                    grid.translate(&DVector::from_vec(vec![start])).unwrap();
-                    grid
-                })
-                .collect::<Vec<_>>();
-            (result, grid_result)
-        }
-    }
 }
 
 async fn get_energy_cs(
