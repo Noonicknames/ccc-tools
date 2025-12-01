@@ -7,30 +7,29 @@ use la::{BlasLib, LapackeLib};
 use nalgebra::DVector;
 
 fn main() {
-    // let mut x_vec = Vec::new();
-    // let mut y_vec = Vec::new();
-    // for line in include_str!("../T=100eV").lines() {
-    //     x_vec.push(
-    //         -line
-    //             .split_whitespace()
-    //             .nth(0)
-    //             .unwrap()
-    //             .parse::<f64>()
-    //             .unwrap()
-    //             * 1000.0,
-    //     );
-    //     y_vec.push(
-    //         line.split_whitespace()
-    //             .nth(1)
-    //             .unwrap()
-    //             .parse::<f64>()
-    //             .unwrap(),
-    //     );
-    // }
+    let mut x_vec = Vec::new();
+    let mut y_vec = Vec::new();
+    for line in include_str!("../T=100eV").lines() {
+        x_vec.push(
+            line
+                .split_whitespace()
+                .nth(0)
+                .unwrap()
+                .parse::<f64>()
+                .unwrap(),
+        );
+        y_vec.push(
+            line.split_whitespace()
+                .nth(1)
+                .unwrap()
+                .parse::<f64>()
+                .unwrap(),
+        );
+    }
 
     let test_func = f64::sin;
-    let x_vec = Vec::from_iter((0..=100).map(|i| i as f64 / 10.0));
-    let y_vec = x_vec.iter().cloned().map(test_func).collect::<Vec<_>>();
+    // let x_vec = Vec::from_iter((0..=100).map(|i| i as f64 / 10.0));
+    // let y_vec = x_vec.iter().cloned().map(test_func).collect::<Vec<_>>();
     println!("{:?}", x_vec);
     let widths = x_vec
         .windows(2)
