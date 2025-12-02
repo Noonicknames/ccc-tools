@@ -124,6 +124,7 @@ impl ConfigSerde {
 /// Integration grid points.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum IntegrationGridPoints {
+    MonotoneCubic(RangeOrCountSerde<usize>),
     NaturalCubic(RangeOrCountSerde<usize>),
     AutoGauss(RangeOrCountSerde<usize>),
     Gauss(RangeOrCountSerde<usize>),
@@ -134,6 +135,7 @@ pub enum IntegrationGridPoints {
 impl IntegrationGridPoints {
     pub fn kind(&self) -> IntegrationKind {
         match self {
+            Self::MonotoneCubic(..) => IntegrationKind::MonotoneCubic,
             Self::AutoGauss(..) => IntegrationKind::AutoGauss,
             Self::Gauss(..) => IntegrationKind::Gauss,
             Self::NaturalCubic(..) => IntegrationKind::NaturalCubic,
@@ -160,31 +162,32 @@ impl IntegrationGridPoints {
 
     /// Gets the range of indexes of points.
     pub fn try_range(&self, constraint: Range<usize>) -> Option<Range<usize>> {
-        if let IntegrationGridPoints::AutoGauss(range)
-        | IntegrationGridPoints::NaturalCubic(range)
-        | IntegrationGridPoints::Gauss(range) = self
-        {
-            return Some(match range {
-                &RangeOrCountSerde::Count(n) => {
-                    constraint.start..(constraint.start + n).min(constraint.end)
-                }
-                RangeOrCountSerde::Range(range) => {
-                    let start = match range.start_bound() {
-                        Bound::Excluded(&start) => (start + 1).max(constraint.start),
-                        Bound::Included(&start) => start.max(constraint.start),
-                        Bound::Unbounded => constraint.start,
-                    };
-                    let end = match range.end_bound() {
-                        Bound::Excluded(&end) => end.min(constraint.end),
-                        Bound::Included(&end) => (end + 1).min(constraint.end),
-                        Bound::Unbounded => constraint.end,
-                    };
-                    start..end
-                }
-            });
+        match self {
+            IntegrationGridPoints::AutoGauss(range)
+            | IntegrationGridPoints::NaturalCubic(range)
+            | IntegrationGridPoints::MonotoneCubic(range)
+            | IntegrationGridPoints::Gauss(range) => {
+                return Some(match range {
+                    &RangeOrCountSerde::Count(n) => {
+                        constraint.start..(constraint.start + n).min(constraint.end)
+                    }
+                    RangeOrCountSerde::Range(range) => {
+                        let start = match range.start_bound() {
+                            Bound::Excluded(&start) => (start + 1).max(constraint.start),
+                            Bound::Included(&start) => start.max(constraint.start),
+                            Bound::Unbounded => constraint.start,
+                        };
+                        let end = match range.end_bound() {
+                            Bound::Excluded(&end) => end.min(constraint.end),
+                            Bound::Included(&end) => (end + 1).min(constraint.end),
+                            Bound::Unbounded => constraint.end,
+                        };
+                        start..end
+                    }
+                });
+            }
+            IntegrationGridPoints::Repeat(..) => None,
         }
-
-        None
     }
 
     pub fn flat_iter(slice: &[Self]) -> impl Iterator<Item = &Self> {

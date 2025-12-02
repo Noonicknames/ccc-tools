@@ -30,7 +30,8 @@ use crate::{
         EnergyUnitsOrAuto, ResultSet, TemperatureUnits, integration_grid_to_points,
     },
     integrate::{
-        GaussIntegrator, IntegrationKind, Integrator, NaturalCubicIntegrator, SubIntegrators,
+        GaussIntegrator, IntegrationKind, Integrator, MonotoneCubicIntegrator,
+        NaturalCubicIntegrator, SubIntegrators,
     },
     util::ensure_folder_exists,
 };
@@ -206,7 +207,7 @@ async fn process_result_set(
                 })
                 .collect::<Vec<_>>();
 
-            while let Some((temperature, integrand)) = recv.recv().await {
+            while let Some((int_kind, temperature, integrand)) = recv.recv().await {
                 let mut x_grid = dense_x_grid.clone();
                 let interpolation = integrator.interpolation(&integrand);
 
@@ -281,6 +282,10 @@ async fn process_result_set(
     let mut grid = integration_grid_to_points(&grid, energy_vec.len())
         .into_iter()
         .map(|(kind, range)| match kind {
+            IntegrationKind::MonotoneCubic => (
+                range.clone(),
+                Box::new(MonotoneCubicIntegrator::new(&energy_vec[range])) as Box<dyn Integrator>,
+            ),
             IntegrationKind::AutoGauss => {
                 let integrand = energy_vec
                     .iter()
@@ -350,7 +355,7 @@ async fn process_result_set(
         rate_vec.push(result);
 
         if let Some((_, send)) = &output_integrands_data {
-            if let Err(err) = send.send((temperature, integrand)) {
+            if let Err(err) = send.send((, temperature, integrand)) {
                 diagnostics.write_log_background(
                     warn!("Failed to send integrand across channel.")
                         .with_sublog(error!("{}", err)),

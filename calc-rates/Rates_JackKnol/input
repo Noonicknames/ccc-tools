@@ -1,0 +1,3 @@
+0               /* Initial vibrational level loop finish point (set to 99 to take vi_f from directory)
+116045    10   /*  Tmax, number of points (temperature grid)
+1                /* converstion parameter for rates units - set to 0 for atomic, 1 for cm^3/s

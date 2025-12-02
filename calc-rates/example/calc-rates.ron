@@ -2,9 +2,16 @@
     // Sets of results to extract
     result_sets: [
         (
-            name: "cubic_spline",
+            name: "natural_cubic_spline",
             source: "./test_out/ics.s2P.s2S",
             grid: [NaturalCubic("..")],
+            energy_units: Auto,
+            cs_units: Auto,
+        ),
+        (
+            name: "monotone_cubic_spline",
+            source: "./test_out/ics.s2P.s2S",
+            grid: [MonotoneCubic("..")],
             energy_units: Auto,
             cs_units: Auto,
         ),

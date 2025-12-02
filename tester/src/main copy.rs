@@ -11,7 +11,8 @@ fn main() {
     let mut y_vec = Vec::new();
     for line in include_str!("../T=100eV").lines() {
         x_vec.push(
-            line.split_whitespace()
+            line
+                .split_whitespace()
                 .nth(0)
                 .unwrap()
                 .parse::<f64>()
@@ -46,16 +47,19 @@ fn main() {
 
     let mut d = DVector::<f64>::from_vec(
         (0..n_func - 1)
-            .map(|i| 4.0 * (1.0 / widths[i + 1] + 1.0 / widths[i]))
+            .map(|i| 4.0 * (1.0 / (widths[i + 1] * widths[i]) + 1.0 / (widths[i] * widths[i])))
             .collect::<Vec<_>>(),
     );
     let mut du = DVector::<f64>::from_vec(
         (0..n_func - 2)
-            .map(|i| 2.0 / widths[i + 1])
+            .map(|i| 2.0 / (widths[i + 1] * widths[i + 1]))
             .collect::<Vec<_>>(),
     );
-    let mut dl =
-        DVector::<f64>::from_vec((1..n_func - 1).map(|i| 2.0 / widths[i]).collect::<Vec<_>>());
+    let mut dl = DVector::<f64>::from_vec(
+        (1..n_func - 1)
+            .map(|i| 2.0 / (widths[i] * widths[i - 1]))
+            .collect::<Vec<_>>(),
+    );
     let mut b = DVector::<f64>::from_vec(
         (0..n_func - 1)
             .map(|i| {
@@ -77,51 +81,6 @@ fn main() {
 
     println!("{}", b);
 
-    let delta_vec = x_vec
-        .windows(2)
-        .zip(y_vec.windows(2))
-        .map(|(x_window, y_window)| {
-            let &[x0, x1] = x_window else { unreachable!() };
-            let &[y0, y1] = y_window else { unreachable!() };
-            (y1 - y0) / (x1 - x0)
-        })
-        .collect::<Vec<_>>();
-
-    let mut m_vec = b
-        .as_slice()
-        .first()
-        .cloned()
-        .into_iter()
-        .chain(b.as_slice().iter().cloned())
-        .chain(b.as_slice().last().cloned())
-        .collect::<Vec<_>>();
-
-    for i in 0..delta_vec.len() {
-        if delta_vec[i] == 0.0 {
-            m_vec[i] = 0.0;
-            m_vec[i + 1] = 0.0;
-            continue;
-        } else {
-            let alpha = m_vec[i] / delta_vec[i];
-            let beta = if i > 0 {
-                m_vec[i] / delta_vec[i - 1]
-            } else {
-                0.0
-            };
-
-            if alpha < 0.0 || beta < 0.0 {
-                m_vec[i] = 0.0;
-            }
-
-            let norm_sq = alpha * alpha + beta * beta;
-            if norm_sq > 9.0 {
-                let tau = 3.0 / norm_sq.sqrt();
-                m_vec[i] = tau * alpha * delta_vec[i];
-                m_vec[i + 1] = tau * beta * delta_vec[i];
-            }
-        }
-    }
-
     let file = File::create("y.dat").unwrap();
     let mut file = BufWriter::new(file);
 
@@ -141,21 +100,19 @@ fn main() {
 
         c0 = y_vec[idx];
         c1 = y_vec[idx + 1];
-        c2 = m_vec[idx] * widths[idx];
-        c3 = m_vec[idx + 1] * widths[idx];
 
-        // if idx == 0 {
-        //     c3 = b[0] * widths[0];
-        //     c2 = (-3.0 * c0 + 3.0 * c1 - c3) / 2.0;
-        //     // c2 = 0.0
-        // } else if idx >= n_func - 1 {
-        //     c2 = b[n_func - 2] * widths[n_func - 1];
-        //     c3 = (-3.0 * c0 + 3.0 * c1 - c2) / 2.0;
-        //     // c3 = 0.0;
-        // } else {
-        //     c2 = b[idx - 1] * widths[idx];
-        //     c3 = b[idx] * widths[idx];
-        // }
+        if idx == 0 {
+            c3 = b[0];
+            c2 = (-3.0 * c0 + 3.0 * c1 - c3) / 2.0;
+            // c2 = 0.0
+        } else if idx >= n_func - 1 {
+            c2 = b[n_func - 2] * widths[n_func - 1] / widths[n_func - 2];
+            c3 = (-3.0 * c0 + 3.0 * c1 - c2) / 2.0;
+            // c3 = 0.0;
+        } else {
+            c2 = b[idx - 1] * widths[idx] / widths[idx - 1];
+            c3 = b[idx];
+        }
 
         if i * n_func % 3000 <= n_func {
             println!(
@@ -169,11 +126,7 @@ fn main() {
 
         // println!("Scaled x: {}", scaled_x);
 
-        // let q = c0 * h00(scaled_x) + c1 * h01(scaled_x) + c2 * h10(scaled_x) + c3 * h11(scaled_x);
-        let q = y_vec[idx] * h00(scaled_x)
-            + y_vec[idx + 1] * h01(scaled_x)
-            + widths[idx] * m_vec[idx] * h10(scaled_x)
-            + widths[idx] * m_vec[idx + 1] * h11(scaled_x);
+        let q = c0 * h00(scaled_x) + c1 * h01(scaled_x) + c2 * h10(scaled_x) + c3 * h11(scaled_x);
 
         let answer = test_func(global_x);
 
@@ -182,3 +135,73 @@ fn main() {
 
     println!("Hello, world!");
 }
+
+// fn main() {
+//     let x_vec = Vec::from_iter((0..=40).map(|i| i as f64));
+//     let y_vec = Vec::from_iter(x_vec.iter().map(|&x| x.ln() / x));
+
+//     let n_func = y_vec.len() - 1;
+//     let h00 = |t: f64| -> f64 { (1.0 + 2.0 * t) * (1.0 - t) * (1.0 - t) };
+//     let h01 = |t: f64| -> f64 { t * t * (3.0 - 2.0 * t) };
+//     let h10 = |t: f64| -> f64 { t * (1.0 - t) * (1.0 - t) };
+//     let h11 = |t: f64| -> f64 { t * t * (t - 1.0) };
+
+//     let mut d = DVector::<f64>::from_vec(vec![4.0; n_func - 1]);
+//     let mut du = DVector::<f64>::from_vec(vec![1.0; n_func - 1]);
+//     let mut dl = DVector::<f64>::from_vec(vec![1.0; n_func - 1]);
+//     let mut b = DVector::<f64>::zeros(n_func - 1);
+
+//     b.iter_mut().enumerate().for_each(|(idx, b)| {
+//         *b = (y_vec[idx + 2] - y_vec[idx]) * 3.0;
+//     });
+
+//     let blas_lib = BlasLib::new().unwrap();
+//     let lapacke_lib = LapackeLib::new(&blas_lib).unwrap();
+//     let lapacke = lapacke_lib.functions();
+
+//     lapacke.dgtsv(&mut d, &mut du, &mut dl, &mut b);
+
+//     println!("{}", b);
+
+//     let file = File::create("y.dat").unwrap();
+//     let mut file = BufWriter::new(file);
+
+//     for (i, y) in y_vec.iter().enumerate() {
+//         writeln!(&mut file, "{} {}", i, y).unwrap();
+//     }
+
+//     let file = File::create("out.dat").unwrap();
+//     let mut file = BufWriter::new(file);
+
+//     for i in 1..1000 as usize {
+//         let idx = i * n_func / 1000;
+//         let x = (i * n_func).rem_euclid(1000 as usize) as f64 / 1000.0;
+//         let global_x = (i * n_func) as f64 / 1000.0;
+
+//         let (c0, c1, c2, c3);
+
+//         c0 = y_vec[idx];
+//         c1 = y_vec[idx + 1];
+
+//         if idx == 0 {
+//             c3 = b[0];
+//             c2 = (-3.0 * c0 + 3.0 * c1 - c3) / 2.0;
+//         } else if idx == n_func - 1 {
+//             c2 = b[n_func - 2];
+//             c3 = (3.0 * c0 - 3.0 * c1 + c2) / 2.0;
+//         } else {
+//             c2 = b[idx - 1];
+//             c3 = b[idx];
+//         }
+
+//         if i * n_func % 1000 <= n_func {
+//             println!("Curvature: {}", -6.0 * c0 + 6.0 * c1 - 4.0 * c2 - 2.0 * c3);
+//         }
+
+//         let q = c0 * h00(x) + c1 * h01(x) + c2 * h10(x) + c3 * h11(x);
+
+//         writeln!(&mut file, "{} {}", global_x, q).unwrap();
+//     }
+
+//     println!("Hello, world!");
+// }
