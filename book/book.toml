@@ -2,3 +2,6 @@
 title = "CCC-Tools Reference"
 authors = ["Noon"]
 language = "en"
+
+[output.html]
+site-url = "/book/"
