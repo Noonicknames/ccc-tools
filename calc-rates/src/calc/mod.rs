@@ -181,7 +181,7 @@ async fn process_result_set(
     let blas_lib = BlasLib::new().unwrap();
     let lapacke_lib = LapackeLib::new(&blas_lib).unwrap();
 
-    let mut integrator = integration_grid_to_points(&grid, energy_vec.len())
+    let integrator = integration_grid_to_points(&grid, energy_vec.len())
         .into_iter()
         .map(|(kind, range)| match kind {
             IntegrationKind::MonotoneCubic => (
@@ -229,61 +229,73 @@ async fn process_result_set(
 
     let output_integrands_data = if output_integrands {
         let (send, mut recv) = tokio::sync::mpsc::unbounded_channel::<(f64, Vec<f64>)>();
-        let integrands_folder = output_folder.join(format!("{}.integrands", name));
+        let integrands_folder = Arc::new(output_folder.join(format!("{}.integrands", name)));
         let temperature_units = temperature_units.clone();
         let diagnostics = Arc::clone(&diagnostics);
         let energy_vec = Arc::clone(&energy_vec);
         let name = Arc::clone(&name);
         let integrator = Arc::clone(&integrator);
         let task = tokio::task::spawn(async move {
-            ensure_folder_exists(&integrands_folder).await?;
+            ensure_folder_exists(integrands_folder.as_ref()).await?;
 
             let mut open_options = OpenOptions::new();
             open_options.create(true).write(true).truncate(true);
 
             let mut tasks = FuturesUnordered::new();
 
-            let energy_range =
-                energy_vec.first().cloned().unwrap()..energy_vec.last().cloned().unwrap();
-            let dense_x_grid = (0..=3000)
-                .map(|i| {
-                    i as f64 / 3000.0 * (energy_range.end - energy_range.start) + energy_range.start
-                })
-                .collect::<Vec<_>>();
+            let dense_x_grid = Arc::new(
+                energy_vec
+                    .windows(2)
+                    .flat_map(|energies| {
+                        (0..20).map(|i| i as f64 / 20.0 * (energies[1] - energies[0]) + energies[0])
+                    })
+                    .chain(energy_vec.last().cloned())
+                    .collect::<Vec<_>>(),
+            );
 
             while let Some((temperature, integrand)) = recv.recv().await {
-                let mut x_grid = dense_x_grid.clone();
-                let interpolation = integrator.interpolation(energy_vec.as_slice(), &integrand);
-
-                let integrand_interpolated = match interpolation.interpolate(&mut x_grid) {
-                    Ok(integrand_interpolated) => integrand_interpolated,
-                    Err(()) => {
-                    diagnostics.write_log_background(warn!("Failed to interpolate integrand."));
-                    continue;
-                    }
-                };
- 
-                let mut buf = Vec::new();
-
-                writeln!(
-                    &mut buf,
-                    "# Integrand for `{}`, in units of Ha, a0^2Ha, with T={}{}",
-                    name,
-                    temperature,
-                    temperature_units.as_str()
-                )?;
-
-                for (energy, integrand) in dense_x_grid.iter().zip(integrand_interpolated.iter()) {
-                    writeln!(&mut buf, "{} {:E}", energy, integrand)?;
-                }
-
+                let integrands_folder = Arc::clone(&integrands_folder);
                 let open_options = open_options.clone();
-                let file_name = integrands_folder.join(format!(
-                    "T={}{}",
-                    temperature,
-                    temperature_units.as_str()
-                ));
+                let name = Arc::clone(&name);
+                let diagnostics = Arc::clone(&diagnostics);
+                let energy_vec = Arc::clone(&energy_vec);
+                let dense_x_grid = Arc::clone(&dense_x_grid);
+                let mut x_grid = dense_x_grid.as_ref().clone();
+                let integrator = Arc::clone(&integrator);
                 tasks.push(tokio::spawn(async move {
+                    let interpolation = integrator.interpolation(energy_vec.as_slice(), &integrand);
+
+                    let integrand_interpolated = match interpolation.interpolate(&mut x_grid) {
+                        Ok(integrand_interpolated) => integrand_interpolated,
+                        Err(()) => {
+                            diagnostics
+                                .write_log_background(warn!("Failed to interpolate integrand."));
+                            return Err(std::io::Error::other("other"));
+                        }
+                    };
+
+                    let mut buf = Vec::new();
+
+                    writeln!(
+                        &mut buf,
+                        "# Integrand for `{}`, in units of Ha, a0^2Ha, with T={}{}",
+                        name,
+                        temperature,
+                        temperature_units.as_str()
+                    )?;
+
+                    for (energy, integrand) in
+                        dense_x_grid.iter().zip(integrand_interpolated.iter())
+                    {
+                        writeln!(&mut buf, "{} {:E}", energy, integrand)?;
+                    }
+
+                    let open_options = open_options.clone();
+                    let file_name = integrands_folder.join(format!(
+                        "T={}{}",
+                        temperature,
+                        temperature_units.as_str()
+                    ));
                     let file = open_options.open(&file_name).await;
                     let mut file = match file {
                         Ok(file) => file,

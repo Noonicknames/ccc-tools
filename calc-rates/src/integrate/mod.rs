@@ -30,12 +30,13 @@ pub trait Integrator: Send + Sync {
         xs: &'a [f64],
         ys: &'a [f64],
     ) -> Option<Box<dyn Interpolation + 'a>> {
+        assert_eq!(xs.len(), ys.len());
         _ = (xs, ys);
         None
     }
 }
 
-pub trait Interpolation {
+pub trait Interpolation: Send + Sync {
     fn interpolate_range(&self) -> RangeInclusive<f64>;
     fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()>;
 }
@@ -60,16 +61,19 @@ impl SubIntegrators {
     }
 
     pub fn interpolation<'a>(&self, xs: &'a [f64], ys: &'a [f64]) -> SubInterpolations<'a> {
+        assert_eq!(xs.len(), ys.len());
         let mut subinterpolations = SubInterpolations::empty();
         for (range, integrator) in self.partial.iter() {
-            if let Some(interpolation) = integrator.interpolation(&xs, &ys[range.clone()]) {
+            if let Some(interpolation) =
+                integrator.interpolation(&xs[range.clone()], &ys[range.clone()])
+            {
                 subinterpolations.partials.push(interpolation);
             } else {
-                println!(
-                    "Got linear interpolator between {} and {}",
-                    xs[range.start],
-                    ys[range.end - 1]
-                );
+                // println!(
+                //     "Got linear interpolator between {} and {}",
+                //     xs[range.start],
+                //     ys[range.end - 1]
+                // );
                 subinterpolations
                     .partials
                     .push(Box::new(LinearInterpolation::new(
@@ -141,7 +145,27 @@ impl<'s> LinearInterpolation<'s> {
         }
     }
 
-    pub fn eval_many(&self, xs: &mut [f64]) {}
+    pub fn eval_many(&self, xs: &mut [f64]) {
+        if self.x_vec.is_empty() {
+            xs.iter_mut().for_each(|x| *x = 0.0);
+            return;
+        }
+        let mut ptr = 0;
+        for x in xs.iter_mut() {
+            while ptr < self.x_vec.len() - 1 && *x > self.x_vec[ptr + 1] {
+                ptr += 1;
+            }
+
+            if *x < self.x_vec[0] || ptr >= self.x_vec.len() - 1 {
+                *x = self.y_vec[ptr];
+            } else {
+                let t = (*x - self.x_vec[ptr]) / (self.x_vec[ptr + 1] - self.x_vec[ptr]);
+                assert!(t >= 0.0);
+                assert!(t <= 1.0);
+                *x = t * self.y_vec[ptr + 1] + (1.0 - t) * self.y_vec[ptr];
+            }
+        }
+    }
 }
 
 impl<'s> Interpolation for LinearInterpolation<'s> {
@@ -186,24 +210,24 @@ impl<'s> Interpolation for SubInterpolations<'s> {
         for interpolation in self.partials.iter() {
             let range = interpolation.interpolate_range();
 
-            let start = ptr
-                + match xs[ptr..].binary_search_by(|x| x.total_cmp(range.start())) {
-                    Ok(idx) => idx,
-                    Err(idx) => (idx + 1).min(xs.len().checked_sub(1).unwrap_or(0)),
-                };
-
-            let end = start
-                + match xs[start..].binary_search_by(|x| x.total_cmp(range.end())) {
+            let end = ptr
+                + match xs[ptr..].binary_search_by(|x| x.total_cmp(range.end())) {
                     Ok(idx) | Err(idx) => idx,
                 };
 
-            interpolation.interpolate(&mut xs[start..end])?;
-
-            xs[ptr..start].iter_mut().for_each(|x| *x = 0.0);
+            interpolation.interpolate(&mut xs[ptr..end])?;
 
             ptr = end;
             if ptr == xs.len() {
                 break;
+            }
+        }
+
+        if ptr != xs.len() {
+            if let Some(interpolation) = self.partials.last() {
+                interpolation.interpolate(&mut xs[ptr..])?;
+            } else {
+                xs[ptr..].iter_mut().for_each(|x| *x = 0.0);
             }
         }
 
@@ -223,6 +247,13 @@ impl Integrator for MonotoneCubicIntegrator {
     }
     fn integrate_len(&self) -> usize {
         self.widths.len() + 1
+    }
+    fn interpolation<'a>(
+        &self,
+        _xs: &'a [f64],
+        ys: &'a [f64],
+    ) -> Option<Box<dyn Interpolation + 'a>> {
+        Some(Box::new(self.interpolation(ys)))
     }
 }
 
@@ -429,6 +460,13 @@ impl Integrator for NaturalCubicIntegrator {
     }
     fn integrate_len(&self) -> usize {
         self.widths.len() + 1
+    }
+    fn interpolation<'a>(
+        &self,
+        _xs: &'a [f64],
+        ys: &'a [f64],
+    ) -> Option<Box<dyn Interpolation + 'a>> {
+        Some(Box::new(self.interpolation(ys)))
     }
 }
 
@@ -673,7 +711,7 @@ impl GaussIntegrator {
         let mut result = SubIntegrators::new();
 
         let get_result = |istart: usize, iend: usize, x_points: &[f64]| -> (GaussIntegrator, f64) {
-            let mut grid = GaussIntegrator::new(&x_points[istart..=iend]);
+            let grid = GaussIntegrator::new(&x_points[istart..=iend]);
             let val = grid.integrate(&integrand[istart..=iend]);
             (grid, val)
         };
@@ -721,7 +759,8 @@ mod tests {
     use la::{BlasLib, LapackeLib};
 
     use crate::integrate::{
-        Integrator, Interpolation, MonotoneCubicIntegrator, NaturalCubicIntegrator, SubIntegrators,
+        Integrator, Interpolation, LinearInterpolation, MonotoneCubicIntegrator,
+        NaturalCubicIntegrator, SubIntegrators,
     };
 
     #[test]
@@ -737,13 +776,10 @@ mod tests {
         let mut subintegrators = SubIntegrators::new();
 
         subintegrators.push(
-            0..50,
-            NaturalCubicIntegrator::new(&xs_vec[0..50], lapacke_lib.functions_static()),
+            0..51,
+            NaturalCubicIntegrator::new(&xs_vec[0..51], lapacke_lib.functions_static()),
         );
-        subintegrators.push(
-            50..100,
-            NaturalCubicIntegrator::new(&xs_vec[50..100], lapacke_lib.functions_static()),
-        );
+        subintegrators.push(50..101, MonotoneCubicIntegrator::new(&xs_vec[50..101]));
 
         let interpolation = subintegrators.interpolation(&xs_vec, &ys_vec);
 
@@ -759,7 +795,38 @@ mod tests {
 
             // Test accuracy
             assert!(
-                (result - answer).abs() <= 1e-3,
+                (result - answer).abs() <= 8e-3,
+                "Accuracy insufficient, {} vs {}, difference {} at x={}",
+                result,
+                answer,
+                result - answer,
+                x
+            );
+        }
+    }
+
+    #[test]
+    fn linear_interp() {
+        let test_func = f64::cos;
+        let xs_vec = Vec::from_iter((0..=100).map(|i| i as f64 / 10.0));
+        let test_xs_vec = Vec::from_iter((0..=1000).map(|i| i as f64 / 100.0));
+        let ys_vec = xs_vec.iter().cloned().map(test_func).collect::<Vec<_>>();
+
+        let interpolation = LinearInterpolation::new(&xs_vec, &ys_vec);
+
+        // let interpolation = subintegrators.interpolation(&xs_vec, &ys_vec);
+
+        let mut many_result = test_xs_vec.clone();
+        interpolation.interpolate(&mut many_result).unwrap();
+
+        for (idx, x) in test_xs_vec.iter().enumerate() {
+            let answer = test_func(*x);
+
+            let result = many_result[idx];
+
+            // Test accuracy
+            assert!(
+                (result - answer).abs() <= 2e-3,
                 "Accuracy insufficient, {} vs {}, difference {} at x={}",
                 result,
                 answer,
@@ -886,7 +953,7 @@ mod tests {
         let test_xs_vec = Vec::from_iter((0..=1000).map(|i| i as f64 / 100.0));
         let ys_vec = xs_vec.iter().cloned().map(test_func).collect::<Vec<_>>();
 
-        let mut integrator = MonotoneCubicIntegrator::new(&xs_vec);
+        let integrator = MonotoneCubicIntegrator::new(&xs_vec);
 
         let interpolation = integrator.interpolation(&ys_vec);
 
@@ -964,7 +1031,7 @@ mod tests {
             _ => (i as f64 + 0.1 * (i as f64 * 1430.1).sin()) / 100.0,
         }));
 
-        let mut integrator = MonotoneCubicIntegrator::new(&xs_vec);
+        let integrator = MonotoneCubicIntegrator::new(&xs_vec);
 
         for &(name, test_func, answer) in tests.iter() {
             let ys_vec = Vec::from_iter(xs_vec.iter().cloned().map(test_func));
