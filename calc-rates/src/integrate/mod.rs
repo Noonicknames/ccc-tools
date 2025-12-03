@@ -1,4 +1,7 @@
-use std::ops::{Range, RangeInclusive};
+use std::{
+    ops::{Range, RangeInclusive},
+    sync::Arc,
+};
 
 use la::LapackeFunctionsStatic;
 use nalgebra::{DMatrix, DVector};
@@ -17,23 +20,28 @@ pub enum IntegrationKind {
     Gauss,
 }
 
-pub trait Integrator {
-    fn integrate(&mut self, ys: &[f64]) -> f64;
+pub trait Integrator: Send + Sync {
+    fn integrate(&self, ys: &[f64]) -> f64;
     fn integrate_len(&self) -> usize;
 
     /// Return an interpolation implementing [Interpolation], if supported.
-    fn interpolate<'a>(&'a mut self, ys: &'a [f64]) -> Option<Box<dyn Interpolation + 'a>> {
-        _ = ys;
+    fn interpolation<'a>(
+        &self,
+        xs: &'a [f64],
+        ys: &'a [f64],
+    ) -> Option<Box<dyn Interpolation + 'a>> {
+        _ = (xs, ys);
         None
     }
 }
 
 pub trait Interpolation {
-    fn interpolate(&mut self, xs: &mut [f64]) -> Result<(), ()>;
+    fn interpolate_range(&self) -> RangeInclusive<f64>;
+    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()>;
 }
 
 pub struct SubIntegrators {
-    partial: Vec<(Range<usize>, Box<dyn Integrator>)>,
+    partial: Vec<(Range<usize>, Box<dyn Integrator + Sync + Send>)>,
 }
 
 impl SubIntegrators {
@@ -51,13 +59,33 @@ impl SubIntegrators {
         self.partial.push((range, partial_integrator));
     }
 
-    pub fn interpolation<'a>(&'a mut self, ys: &'a [f64]) -> SubInterpolations<'a> {}
+    pub fn interpolation<'a>(&self, xs: &'a [f64], ys: &'a [f64]) -> SubInterpolations<'a> {
+        let mut subinterpolations = SubInterpolations::empty();
+        for (range, integrator) in self.partial.iter() {
+            if let Some(interpolation) = integrator.interpolation(&xs, &ys[range.clone()]) {
+                subinterpolations.partials.push(interpolation);
+            } else {
+                println!(
+                    "Got linear interpolator between {} and {}",
+                    xs[range.start],
+                    ys[range.end - 1]
+                );
+                subinterpolations
+                    .partials
+                    .push(Box::new(LinearInterpolation::new(
+                        &xs[range.clone()],
+                        &ys[range.clone()],
+                    )));
+            }
+        }
+        subinterpolations
+    }
 }
 
 impl Integrator for SubIntegrators {
-    fn integrate(&mut self, ys: &[f64]) -> f64 {
+    fn integrate(&self, ys: &[f64]) -> f64 {
         self.partial
-            .iter_mut()
+            .iter()
             .map(|(range, integrator)| integrator.integrate(&ys[range.clone()]))
             .sum()
     }
@@ -72,16 +100,22 @@ impl Integrator for SubIntegrators {
 
         end - start
     }
-    fn interpolate(&mut self, ys: &[f64]) -> Option<&dyn Interpolation> {}
+    fn interpolation<'a>(
+        &self,
+        xs: &'a [f64],
+        ys: &'a [f64],
+    ) -> Option<Box<dyn Interpolation + 'a>> {
+        Some(Box::new(self.interpolation(xs, ys)))
+    }
 }
 
-pub struct LinearInterpolation<'a> {
-    x_vec: &'a [f64],
-    y_vec: &'a [f64],
+pub struct LinearInterpolation<'s> {
+    x_vec: &'s [f64],
+    y_vec: &'s [f64],
 }
 
-impl<'a> LinearInterpolation<'a> {
-    pub fn new(x_vec: &'a [f64], y_vec: &'a [f64]) -> Self {
+impl<'s> LinearInterpolation<'s> {
+    pub fn new(x_vec: &'s [f64], y_vec: &'s [f64]) -> Self {
         assert_eq!(x_vec.len(), y_vec.len());
         Self { x_vec, y_vec }
     }
@@ -97,44 +131,94 @@ impl<'a> LinearInterpolation<'a> {
                 Ok(idx) => self.y_vec[idx],
                 Err(idx) => {
                     if idx >= self.x_vec.len() - 1 {
-                        return self.y_vec[self.y_vec.len() - 1];   
+                        return self.y_vec[self.y_vec.len() - 1];
                     }
                     let t = (x - self.x_vec[idx]) / self.x_vec[idx + 1];
 
-                    t * self.y_vec[idx]
-                        + (1.0 - t) * self.y_vec[idx + 1]
+                    t * self.y_vec[idx] + (1.0 - t) * self.y_vec[idx + 1]
                 }
             }
         }
     }
 
-    pub fn eval_many(&self, xs: &mut [f64]) {
-
-    }
+    pub fn eval_many(&self, xs: &mut [f64]) {}
 }
 
-impl<'a> Interpolation for LinearInterpolation<'a> {
-    fn interpolate(&mut self, xs: &mut [f64]) -> Result<(), ()> {
-        Ok(())
+impl<'s> Interpolation for LinearInterpolation<'s> {
+    fn interpolate_range(&self) -> RangeInclusive<f64> {
+        self.x_vec.first().cloned().unwrap_or(0.0)..=self.x_vec.last().cloned().unwrap_or(0.0)
+    }
+    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
+        self.eval_many(xs);
+        Ok(xs)
     }
 }
 
 pub struct SubInterpolations<'a> {
-    partials: Vec<(Range<usize>, &'a dyn Interpolation)>,
+    pub partials: Vec<Box<dyn Interpolation + 'a>>,
 }
 
-impl<'a> SubInterpolations<'a> {}
+impl<'a> SubInterpolations<'a> {
+    pub fn empty() -> Self {
+        Self {
+            partials: Vec::new(),
+        }
+    }
+    pub fn new(partials: Vec<Box<dyn Interpolation + 'a>>) -> Self {
+        Self { partials }
+    }
+}
 
+impl<'s> Interpolation for SubInterpolations<'s> {
+    fn interpolate_range(&self) -> RangeInclusive<f64> {
+        self.partials
+            .first()
+            .map(|partial| partial.interpolate_range().start().clone())
+            .unwrap_or(0.0)
+            ..=self
+                .partials
+                .first()
+                .map(|partial| partial.interpolate_range().start().clone())
+                .unwrap_or(0.0)
+    }
+    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
+        let mut ptr = 0;
+        for interpolation in self.partials.iter() {
+            let range = interpolation.interpolate_range();
+
+            let start = ptr
+                + match xs[ptr..].binary_search_by(|x| x.total_cmp(range.start())) {
+                    Ok(idx) => idx,
+                    Err(idx) => (idx + 1).min(xs.len().checked_sub(1).unwrap_or(0)),
+                };
+
+            let end = start
+                + match xs[start..].binary_search_by(|x| x.total_cmp(range.end())) {
+                    Ok(idx) | Err(idx) => idx,
+                };
+
+            interpolation.interpolate(&mut xs[start..end])?;
+
+            xs[ptr..start].iter_mut().for_each(|x| *x = 0.0);
+
+            ptr = end;
+            if ptr == xs.len() {
+                break;
+            }
+        }
+
+        Ok(xs)
+    }
+}
 pub struct MonotoneCubicIntegrator {
     range: RangeInclusive<f64>,
-    widths: DVector<f64>,
-
-    m_buf: DVector<f64>,
-    delta_buf: DVector<f64>,
+    widths: Arc<[f64]>,
+    // m_buf: DVector<f64>,
+    // delta_buf: DVector<f64>,
 }
 
 impl Integrator for MonotoneCubicIntegrator {
-    fn integrate(&mut self, ys: &[f64]) -> f64 {
+    fn integrate(&self, ys: &[f64]) -> f64 {
         self.interpolation(ys).integral()
     }
     fn integrate_len(&self) -> usize {
@@ -145,66 +229,67 @@ impl Integrator for MonotoneCubicIntegrator {
 impl MonotoneCubicIntegrator {
     pub fn new(xs: &[f64]) -> Self {
         let range = xs.first().cloned().unwrap_or(0.0)..=xs.last().cloned().unwrap_or(0.0);
-        let widths = DVector::from_vec(xs.windows(2).map(|window| window[1] - window[0]).collect());
-        let delta_buf = DVector::zeros(widths.len());
-        let m_buf = DVector::zeros(xs.len());
+        let widths = xs.windows(2).map(|window| window[1] - window[0]).collect();
 
-        Self {
-            range,
-            widths,
-
-            m_buf,
-            delta_buf,
-        }
+        Self { range, widths }
     }
 
-    pub fn interpolation<'a>(&'a mut self, ys: &'a [f64]) -> MonotoneCubicInterpolation<'a> {
-        assert_eq!(ys.len(), self.widths.len() + 1);
+    pub fn interpolation<Y>(&self, ys: Y) -> MonotoneCubicInterpolation<Y>
+    where
+        Y: AsRef<[f64]>,
+    {
+        assert_eq!(ys.as_ref().len(), self.widths.len() + 1);
 
-        for ((y_window, width), delta) in ys
-            .windows(2)
-            .zip(self.widths.iter())
-            .zip(self.delta_buf.iter_mut())
+        let mut delta_buf = vec![0.0; self.widths.len()];
+        let mut m_buf = vec![0.0; self.widths.len() + 1];
+
         {
-            *delta = (y_window[1] - y_window[0]) / width;
-        }
+            let ys = ys.as_ref();
 
-        self.m_buf[0] = self.delta_buf[0];
-        *self.m_buf.as_mut_slice().last_mut().unwrap() = self.delta_buf[self.delta_buf.len() - 1];
-
-        for (i, delta_window) in (1..self.m_buf.len() - 1).zip(self.delta_buf.as_slice().windows(2))
-        {
-            if delta_window[0] * delta_window[1] <= f64::EPSILON {
-                self.m_buf[i] = 0.0;
-            } else {
-                self.m_buf[i] = (delta_window[0] + delta_window[1]) / 2.0;
+            for ((y_window, width), delta) in ys
+                .windows(2)
+                .zip(self.widths.iter())
+                .zip(delta_buf.iter_mut())
+            {
+                *delta = (y_window[1] - y_window[0]) / width;
             }
-        }
 
-        // m_vec.last_mut().iter_mut().for_each(|last| **last = 0.0);
+            m_buf[0] = delta_buf[0];
+            *m_buf.as_mut_slice().last_mut().unwrap() = delta_buf[delta_buf.len() - 1];
 
-        for i in 0..self.delta_buf.len() {
-            if self.delta_buf[i] == 0.0 {
-                self.m_buf[i] = 0.0;
-                self.m_buf[i + 1] = 0.0;
-                continue;
-            } else {
-                let alpha = self.m_buf[i] / self.delta_buf[i];
-                let beta = if i > 0 {
-                    self.m_buf[i] / self.delta_buf[i - 1]
+            for (i, delta_window) in (1..m_buf.len() - 1).zip(delta_buf.as_slice().windows(2)) {
+                if delta_window[0] * delta_window[1] <= f64::EPSILON {
+                    m_buf[i] = 0.0;
                 } else {
-                    0.0
-                };
-
-                if alpha < 0.0 || beta < 0.0 {
-                    self.m_buf[i] = 0.0;
+                    m_buf[i] = (delta_window[0] + delta_window[1]) / 2.0;
                 }
+            }
 
-                let norm_sq = alpha * alpha + beta * beta;
-                if norm_sq > 9.0 {
-                    let tau = 3.0 / norm_sq.sqrt();
-                    self.m_buf[i] = tau * alpha * self.delta_buf[i];
-                    self.m_buf[i + 1] = tau * beta * self.delta_buf[i];
+            // m_vec.last_mut().iter_mut().for_each(|last| **last = 0.0);
+
+            for i in 0..delta_buf.len() {
+                if delta_buf[i] == 0.0 {
+                    m_buf[i] = 0.0;
+                    m_buf[i + 1] = 0.0;
+                    continue;
+                } else {
+                    let alpha = m_buf[i] / delta_buf[i];
+                    let beta = if i > 0 {
+                        m_buf[i] / delta_buf[i - 1]
+                    } else {
+                        0.0
+                    };
+
+                    if alpha < 0.0 || beta < 0.0 {
+                        m_buf[i] = 0.0;
+                    }
+
+                    let norm_sq = alpha * alpha + beta * beta;
+                    if norm_sq > 9.0 {
+                        let tau = 3.0 / norm_sq.sqrt();
+                        m_buf[i] = tau * alpha * delta_buf[i];
+                        m_buf[i + 1] = tau * beta * delta_buf[i];
+                    }
                 }
             }
         }
@@ -212,20 +297,26 @@ impl MonotoneCubicIntegrator {
         MonotoneCubicInterpolation {
             range: self.range.clone(),
             y_vec: ys,
-            widths: &self.widths,
-            m_buf: &self.m_buf,
+            widths: Arc::clone(&self.widths),
+            m_buf: m_buf,
         }
     }
 }
 
-pub struct MonotoneCubicInterpolation<'a> {
+pub struct MonotoneCubicInterpolation<Y>
+where
+    Y: AsRef<[f64]>,
+{
     range: RangeInclusive<f64>,
-    y_vec: &'a [f64],
-    widths: &'a DVector<f64>,
-    m_buf: &'a DVector<f64>,
+    y_vec: Y,
+    widths: Arc<[f64]>,
+    m_buf: Vec<f64>,
 }
 
-impl<'a> MonotoneCubicInterpolation<'a> {
+impl<Y> MonotoneCubicInterpolation<Y>
+where
+    Y: AsRef<[f64]>,
+{
     pub fn integral(&self) -> f64 {
         (0..self.widths.len())
             .map(|idx| {
@@ -237,14 +328,16 @@ impl<'a> MonotoneCubicInterpolation<'a> {
 
     pub fn coefficients(&self, idx: usize) -> (f64, f64, f64, f64) {
         assert!(idx < self.m_buf.len() - 1);
+        let y_vec = self.y_vec.as_ref();
         let (c0, c1, c2, c3);
-        c0 = self.y_vec[idx];
-        c1 = self.y_vec[idx + 1];
+        c0 = y_vec[idx];
+        c1 = y_vec[idx + 1];
         c2 = self.m_buf[idx] * self.widths[idx];
         c3 = self.m_buf[idx + 1] * self.widths[idx];
 
         (c0, c1, c2, c3)
     }
+
     ///
     pub fn eval_many(&self, xs: &mut [f64]) {
         let mut current_x = *self.range.start();
@@ -260,7 +353,7 @@ impl<'a> MonotoneCubicInterpolation<'a> {
             }
 
             if relative_x < 0.0 || idx >= self.widths.len() {
-                *x = self.y_vec[idx];
+                *x = self.y_vec.as_ref()[idx];
             } else {
                 let h00 = |t: f64| -> f64 { (1.0 + 2.0 * t) * (1.0 - t) * (1.0 - t) };
                 let h01 = |t: f64| -> f64 { t * t * (3.0 - 2.0 * t) };
@@ -290,7 +383,7 @@ impl<'a> MonotoneCubicInterpolation<'a> {
         }
 
         if relative_x < 0.0 || idx >= self.widths.len() {
-            self.y_vec[idx]
+            self.y_vec.as_ref()[idx]
         } else {
             let h00 = |t: f64| -> f64 { (1.0 + 2.0 * t) * (1.0 - t) * (1.0 - t) };
             let h01 = |t: f64| -> f64 { t * t * (3.0 - 2.0 * t) };
@@ -306,31 +399,32 @@ impl<'a> MonotoneCubicInterpolation<'a> {
     }
 }
 
-impl<'a> Interpolation for MonotoneCubicInterpolation<'a> {
-    fn interpolate(&mut self, xs: &mut [f64]) -> Result<(), ()> {
+impl<Y> Interpolation for MonotoneCubicInterpolation<Y>
+where
+    Y: AsRef<[f64]> + Send + Sync,
+{
+    fn interpolate_range(&self) -> RangeInclusive<f64> {
+        self.range.clone()
+    }
+    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
         self.eval_many(xs);
-        Ok(())
+        Ok(xs)
     }
 }
 
 pub struct NaturalCubicIntegrator {
     range: RangeInclusive<f64>,
-    widths: Vec<f64>,
+    widths: Arc<[f64]>,
 
     d: DVector<f64>,
     du: DVector<f64>,
     dl: DVector<f64>,
 
-    d_buf: DVector<f64>,
-    du_buf: DVector<f64>,
-    dl_buf: DVector<f64>,
-    b_buf: DVector<f64>,
-
     lapacke: LapackeFunctionsStatic,
 }
 
 impl Integrator for NaturalCubicIntegrator {
-    fn integrate(&mut self, ys: &[f64]) -> f64 {
+    fn integrate(&self, ys: &[f64]) -> f64 {
         self.interpolation(ys).integral()
     }
     fn integrate_len(&self) -> usize {
@@ -341,7 +435,8 @@ impl Integrator for NaturalCubicIntegrator {
 impl NaturalCubicIntegrator {
     pub fn new(xs: &[f64], lapacke: LapackeFunctionsStatic) -> Self {
         let range = xs.first().cloned().unwrap_or(0.0)..=xs.last().cloned().unwrap_or(0.0);
-        let widths = Vec::from_iter(xs.windows(2).map(|window| window[1] - window[0]));
+        let widths: Arc<[f64]> =
+            Vec::from_iter(xs.windows(2).map(|window| window[1] - window[0])).into();
         let n_func = widths.len();
         let d = DVector::<f64>::from_vec(
             (0..n_func - 1)
@@ -359,11 +454,6 @@ impl NaturalCubicIntegrator {
                 .collect::<Vec<_>>(),
         );
 
-        let d_buf = DVector::zeros(n_func - 1);
-        let du_buf = DVector::zeros(n_func - 2);
-        let dl_buf = DVector::zeros(n_func - 2);
-        let b_buf = DVector::zeros(n_func - 1);
-
         Self {
             range,
             widths,
@@ -371,69 +461,76 @@ impl NaturalCubicIntegrator {
             du,
             dl,
 
-            d_buf,
-            du_buf,
-            dl_buf,
-            b_buf,
-
             lapacke,
         }
     }
 
-    pub fn interpolation<'a>(&'a mut self, ys: &'a [f64]) -> NaturalCubicInterpolation<'a> {
-        assert_eq!(ys.len(), self.widths.len() + 1);
-        self.d_buf.copy_from(&self.d);
-        self.du_buf.copy_from(&self.du);
-        self.dl_buf.copy_from(&self.dl);
+    pub fn interpolation<Y>(&self, ys: Y) -> NaturalCubicInterpolation<Y>
+    where
+        Y: AsRef<[f64]>,
+    {
+        assert_eq!(ys.as_ref().len(), self.widths.len() + 1);
 
-        self.b_buf
-            .iter_mut()
-            .zip(0..self.widths.len() - 1)
-            .for_each(|(b, i)| {
-                *b = 6.0
-                    * (ys[i + 2] / (self.widths[i + 1] * self.widths[i + 1])
+        let mut d = self.d.clone();
+        let mut du = self.du.clone();
+        let mut dl = self.dl.clone();
+
+        let mut b = DVector::from_vec(
+            (0..self.widths.len() - 1)
+                .map(|i| {
+                    let ys = ys.as_ref();
+                    6.0 * (ys[i + 2] / (self.widths[i + 1] * self.widths[i + 1])
                         - ys[i] / (self.widths[i] * self.widths[i])
                         + ys[i + 1]
                             * (1.0 / (self.widths[i] * self.widths[i])
-                                - 1.0 / (self.widths[i + 1] * self.widths[i + 1])));
-            });
+                                - 1.0 / (self.widths[i + 1] * self.widths[i + 1])))
+                })
+                .collect(),
+        );
 
         self.lapacke
-            .dgtsv(
-                &mut self.d_buf,
-                &mut self.du_buf,
-                &mut self.dl_buf,
-                &mut self.b_buf,
-            )
+            .dgtsv(&mut d, &mut du, &mut dl, &mut b)
             .unwrap();
 
         NaturalCubicInterpolation {
             range: self.range.clone(),
-            widths: self.widths.as_slice(),
+            widths: self.widths.clone(),
             c0_buf: ys,
-            c3_buf: self.b_buf.as_slice(),
+            c3_buf: b,
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct NaturalCubicInterpolation<'a> {
-    widths: &'a [f64],
+pub struct NaturalCubicInterpolation<Y>
+where
+    Y: AsRef<[f64]>,
+{
+    widths: Arc<[f64]>,
     range: RangeInclusive<f64>,
-    c0_buf: &'a [f64],
-    c3_buf: &'a [f64],
+    c0_buf: Y,
+    c3_buf: DVector<f64>,
 }
 
-impl<'a> Interpolation for NaturalCubicInterpolation<'a> {
-    fn interpolate(&mut self, xs: &mut [f64]) -> Result<(), ()> {
+impl<Y> Interpolation for NaturalCubicInterpolation<Y>
+where
+    Y: AsRef<[f64]> + Send + Sync,
+{
+    fn interpolate_range(&self) -> RangeInclusive<f64> {
+        self.range.clone()
+    }
+    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
         self.eval_many(xs);
-        Ok(())
+        Ok(xs)
     }
 }
 
-impl<'a> NaturalCubicInterpolation<'a> {
+impl<Y> NaturalCubicInterpolation<Y>
+where
+    Y: AsRef<[f64]>,
+{
     pub fn integral(&self) -> f64 {
-        (0..self.widths.len())
+        (0..self.widths.as_ref().len())
             .map(|idx| {
                 let (c0, c1, c2, c3) = self.coefficients(idx);
                 (c0 / 2.0 + c1 / 2.0 + c2 / 12.0 - c3 / 12.0) * self.widths[idx]
@@ -442,42 +539,46 @@ impl<'a> NaturalCubicInterpolation<'a> {
     }
 
     pub fn coefficients(&self, idx: usize) -> (f64, f64, f64, f64) {
-        assert!(idx < self.widths.len());
+        let widths = self.widths.as_ref();
+        assert!(idx < widths.len());
+        let c0_buf = self.c0_buf.as_ref();
+        let c3_buf = self.c3_buf.as_slice();
         let (c0, c1, c2, c3);
-        c0 = self.c0_buf[idx];
-        c1 = self.c0_buf[idx + 1];
+        c0 = c0_buf[idx];
+        c1 = c0_buf[idx + 1];
         if idx == 0 {
-            c3 = self.c3_buf[0];
+            c3 = c3_buf[0];
             c2 = (-3.0 * c0 + 3.0 * c1 - c3) / 2.0;
             // c2 = 0.0;
-        } else if idx == self.widths.len() - 1 {
-            c2 = self.c3_buf[self.widths.len() - 2] * self.widths[self.widths.len() - 1]
-                / self.widths[self.widths.len() - 2];
+        } else if idx == widths.len() - 1 {
+            c2 = c3_buf[widths.len() - 2] * widths[widths.len() - 1] / widths[widths.len() - 2];
             c3 = (-3.0 * c0 + 3.0 * c1 - c2) / 2.0;
             // c3 = 0.0;
         } else {
-            c2 = self.c3_buf[idx - 1] * self.widths[idx] / self.widths[idx - 1];
-            c3 = self.c3_buf[idx];
+            c2 = c3_buf[idx - 1] * widths[idx] / widths[idx - 1];
+            c3 = c3_buf[idx];
         }
 
         (c0, c1, c2, c3)
     }
     ///
     pub fn eval_many(&self, xs: &mut [f64]) {
+        let widths = self.widths.as_ref();
+        let c0_buf = self.c0_buf.as_ref();
         let mut current_x = *self.range.start();
         let mut idx = 0;
 
         for x in xs.iter_mut() {
             let mut relative_x = *x - current_x;
 
-            while idx < self.widths.len() && relative_x > self.widths[idx] {
-                current_x += self.widths[idx];
-                relative_x -= self.widths[idx];
+            while idx < widths.len() && relative_x > widths[idx] {
+                current_x += widths[idx];
+                relative_x -= widths[idx];
                 idx += 1;
             }
 
-            if relative_x < 0.0 || idx >= self.widths.len() {
-                *x = self.c0_buf[idx];
+            if relative_x < 0.0 || idx >= widths.len() {
+                *x = c0_buf[idx];
             } else {
                 let h00 = |t: f64| -> f64 { (1.0 + 2.0 * t) * (1.0 - t) * (1.0 - t) };
                 let h01 = |t: f64| -> f64 { t * t * (3.0 - 2.0 * t) };
@@ -497,24 +598,26 @@ impl<'a> NaturalCubicInterpolation<'a> {
     }
 
     pub fn eval(&self, x: f64) -> f64 {
+        let widths = self.widths.as_ref();
+        let c0_buf = self.c0_buf.as_ref();
         let mut relative_x = x - self.range.start();
 
         let mut idx = 0;
 
-        while idx < self.widths.len() && relative_x > self.widths[idx] {
-            relative_x -= self.widths[idx];
+        while idx < widths.len() && relative_x > widths[idx] {
+            relative_x -= widths[idx];
             idx += 1;
         }
 
-        if relative_x < 0.0 || idx >= self.widths.len() {
-            self.c0_buf[idx]
+        if relative_x < 0.0 || idx >= widths.len() {
+            c0_buf[idx]
         } else {
             let h00 = |t: f64| -> f64 { (1.0 + 2.0 * t) * (1.0 - t) * (1.0 - t) };
             let h01 = |t: f64| -> f64 { t * t * (3.0 - 2.0 * t) };
             let h10 = |t: f64| -> f64 { t * (1.0 - t) * (1.0 - t) };
             let h11 = |t: f64| -> f64 { t * t * (t - 1.0) };
             let (c0, c1, c2, c3) = self.coefficients(idx);
-            let x_scaled = relative_x / self.widths[idx];
+            let x_scaled = relative_x / widths[idx];
 
             assert!((0.0..=1.0).contains(&x_scaled));
 
@@ -528,7 +631,7 @@ pub struct GaussIntegrator {
 }
 
 impl Integrator for GaussIntegrator {
-    fn integrate(&mut self, ys: &[f64]) -> f64 {
+    fn integrate(&self, ys: &[f64]) -> f64 {
         self.grid.eval(ys)
     }
     fn integrate_len(&self) -> usize {
@@ -617,24 +720,71 @@ mod tests {
 
     use la::{BlasLib, LapackeLib};
 
-    use crate::integrate::{Integrator, MonotoneCubicIntegrator, NaturalCubicIntegrator};
+    use crate::integrate::{
+        Integrator, Interpolation, MonotoneCubicIntegrator, NaturalCubicIntegrator, SubIntegrators,
+    };
 
     #[test]
-    fn natural_cubic_interp() {
-        let test_func = f64::sin;
-        let xs_vec = Vec::from_iter((0..=1000).map(|i| i as f64 / 10.0));
+    fn subinterpolations() {
+        let test_func = f64::cos;
+        let xs_vec = Vec::from_iter((0..=100).map(|i| i as f64 / 10.0));
         let test_xs_vec = Vec::from_iter((0..=1000).map(|i| i as f64 / 100.0));
         let ys_vec = xs_vec.iter().cloned().map(test_func).collect::<Vec<_>>();
 
         let blas_lib = BlasLib::new().unwrap();
         let lapacke_lib = LapackeLib::new(&blas_lib).unwrap();
 
-        let mut integrator = NaturalCubicIntegrator::new(&xs_vec, lapacke_lib.functions_static());
+        let mut subintegrators = SubIntegrators::new();
+
+        subintegrators.push(
+            0..50,
+            NaturalCubicIntegrator::new(&xs_vec[0..50], lapacke_lib.functions_static()),
+        );
+        subintegrators.push(
+            50..100,
+            NaturalCubicIntegrator::new(&xs_vec[50..100], lapacke_lib.functions_static()),
+        );
+
+        let interpolation = subintegrators.interpolation(&xs_vec, &ys_vec);
+
+        println!("Len: {}", interpolation.partials.len());
+
+        let mut many_result = test_xs_vec.clone();
+        interpolation.interpolate(&mut many_result).unwrap();
+
+        for (idx, x) in test_xs_vec.iter().enumerate() {
+            let answer = test_func(*x);
+
+            let result = many_result[idx];
+
+            // Test accuracy
+            assert!(
+                (result - answer).abs() <= 1e-3,
+                "Accuracy insufficient, {} vs {}, difference {} at x={}",
+                result,
+                answer,
+                result - answer,
+                x
+            );
+        }
+    }
+
+    #[test]
+    fn natural_cubic_interp() {
+        let test_func = f64::sin;
+        let xs_vec = Vec::from_iter((0..=100).map(|i| i as f64 / 10.0));
+        let test_xs_vec = Vec::from_iter((0..=1000).map(|i| i as f64 / 100.0));
+        let ys_vec = xs_vec.iter().cloned().map(test_func).collect::<Vec<_>>();
+
+        let blas_lib = BlasLib::new().unwrap();
+        let lapacke_lib = LapackeLib::new(&blas_lib).unwrap();
+
+        let integrator = NaturalCubicIntegrator::new(&xs_vec, lapacke_lib.functions_static());
 
         let interpolation = integrator.interpolation(&ys_vec);
 
         let mut many_result = test_xs_vec.clone();
-        interpolation.eval_many(&mut many_result);
+        interpolation.interpolate(&mut many_result).unwrap();
 
         for (idx, x) in test_xs_vec.iter().enumerate() {
             let answer = test_func(*x);
@@ -709,7 +859,7 @@ mod tests {
         let blas_lib = BlasLib::new().unwrap();
         let lapacke_lib = LapackeLib::new(&blas_lib).unwrap();
 
-        let mut integrator = NaturalCubicIntegrator::new(&xs_vec, lapacke_lib.functions_static());
+        let integrator = NaturalCubicIntegrator::new(&xs_vec, lapacke_lib.functions_static());
 
         for &(name, test_func, answer) in tests.iter() {
             let ys_vec = Vec::from_iter(xs_vec.iter().cloned().map(test_func));

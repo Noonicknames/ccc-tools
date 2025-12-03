@@ -30,7 +30,7 @@ use crate::{
         EnergyUnitsOrAuto, ResultSet, TemperatureUnits, integration_grid_to_points,
     },
     integrate::{
-        GaussIntegrator, IntegrationKind, Integrator, MonotoneCubicIntegrator,
+        GaussIntegrator, IntegrationKind, Integrator, Interpolation, MonotoneCubicIntegrator,
         NaturalCubicIntegrator, SubIntegrators,
     },
     util::ensure_folder_exists,
@@ -181,6 +181,52 @@ async fn process_result_set(
     let blas_lib = BlasLib::new().unwrap();
     let lapacke_lib = LapackeLib::new(&blas_lib).unwrap();
 
+    let mut integrator = integration_grid_to_points(&grid, energy_vec.len())
+        .into_iter()
+        .map(|(kind, range)| match kind {
+            IntegrationKind::MonotoneCubic => (
+                range.clone(),
+                Box::new(MonotoneCubicIntegrator::new(&energy_vec[range]))
+                    as Box<dyn Integrator + Sync + Send>,
+            ),
+            IntegrationKind::AutoGauss => {
+                let integrand = energy_vec
+                    .iter()
+                    .zip(cs_vec.iter())
+                    .map(|(&energy, &cs)| cs * energy)
+                    .collect::<Vec<_>>();
+                (
+                    range.clone(),
+                    Box::new(GaussIntegrator::auto(
+                        &energy_vec[range],
+                        &integrand,
+                        |x| 10.0 / (x as f64 + 1.0).ln(),
+                        5,
+                    )) as Box<dyn Integrator + Sync + Send>,
+                )
+            }
+            IntegrationKind::NaturalCubic => (
+                range.clone(),
+                Box::new(NaturalCubicIntegrator::new(
+                    &energy_vec[range],
+                    lapacke_lib.functions_static(),
+                )) as Box<dyn Integrator + Sync + Send>,
+            ),
+            IntegrationKind::Gauss => (
+                range.clone(),
+                Box::new(GaussIntegrator::new(&energy_vec[range]))
+                    as Box<dyn Integrator + Sync + Send>,
+            ),
+        })
+        .fold(
+            SubIntegrators::new(),
+            |mut acc, (range, partial_integrator)| {
+                acc.push_boxed(range, partial_integrator);
+                acc
+            },
+        );
+    let integrator = Arc::new(integrator);
+
     let output_integrands_data = if output_integrands {
         let (send, mut recv) = tokio::sync::mpsc::unbounded_channel::<(f64, Vec<f64>)>();
         let integrands_folder = output_folder.join(format!("{}.integrands", name));
@@ -188,7 +234,7 @@ async fn process_result_set(
         let diagnostics = Arc::clone(&diagnostics);
         let energy_vec = Arc::clone(&energy_vec);
         let name = Arc::clone(&name);
-        let lapacke_lib = lapacke_lib.clone();
+        let integrator = Arc::clone(&integrator);
         let task = tokio::task::spawn(async move {
             ensure_folder_exists(&integrands_folder).await?;
 
@@ -197,8 +243,6 @@ async fn process_result_set(
 
             let mut tasks = FuturesUnordered::new();
 
-            let mut integrator =
-                NaturalCubicIntegrator::new(&energy_vec, lapacke_lib.functions_static());
             let energy_range =
                 energy_vec.first().cloned().unwrap()..energy_vec.last().cloned().unwrap();
             let dense_x_grid = (0..=3000)
@@ -207,13 +251,18 @@ async fn process_result_set(
                 })
                 .collect::<Vec<_>>();
 
-            while let Some((int_kind, temperature, integrand)) = recv.recv().await {
+            while let Some((temperature, integrand)) = recv.recv().await {
                 let mut x_grid = dense_x_grid.clone();
-                let interpolation = integrator.interpolation(&integrand);
+                let interpolation = integrator.interpolation(energy_vec.as_slice(), &integrand);
 
-                interpolation.eval_many(&mut x_grid);
-                let integrand_interpolated = x_grid;
-
+                let integrand_interpolated = match interpolation.interpolate(&mut x_grid) {
+                    Ok(integrand_interpolated) => integrand_interpolated,
+                    Err(()) => {
+                    diagnostics.write_log_background(warn!("Failed to interpolate integrand."));
+                    continue;
+                    }
+                };
+ 
                 let mut buf = Vec::new();
 
                 writeln!(
@@ -279,49 +328,6 @@ async fn process_result_set(
         return Ok(());
     }
 
-    let mut grid = integration_grid_to_points(&grid, energy_vec.len())
-        .into_iter()
-        .map(|(kind, range)| match kind {
-            IntegrationKind::MonotoneCubic => (
-                range.clone(),
-                Box::new(MonotoneCubicIntegrator::new(&energy_vec[range])) as Box<dyn Integrator>,
-            ),
-            IntegrationKind::AutoGauss => {
-                let integrand = energy_vec
-                    .iter()
-                    .zip(cs_vec.iter())
-                    .map(|(&energy, &cs)| cs * energy)
-                    .collect::<Vec<_>>();
-                (
-                    range.clone(),
-                    Box::new(GaussIntegrator::auto(
-                        &energy_vec[range],
-                        &integrand,
-                        |x| 10.0 / (x as f64 + 1.0).ln(),
-                        5,
-                    )) as Box<dyn Integrator>,
-                )
-            }
-            IntegrationKind::NaturalCubic => (
-                range.clone(),
-                Box::new(NaturalCubicIntegrator::new(
-                    &energy_vec[range],
-                    lapacke_lib.functions_static(),
-                )) as Box<dyn Integrator>,
-            ),
-            IntegrationKind::Gauss => (
-                range.clone(),
-                Box::new(GaussIntegrator::new(&energy_vec[range])) as Box<dyn Integrator>,
-            ),
-        })
-        .fold(
-            SubIntegrators::new(),
-            |mut acc, (range, partial_integrator)| {
-                acc.push_boxed(range, partial_integrator);
-                acc
-            },
-        );
-
     // let (grid_idx, grid_cache) =
     //     resolve_grid(&energy_vec, &cs_vec, &grid, name.as_ref(), &diagnostics);
 
@@ -342,7 +348,7 @@ async fn process_result_set(
             .map(|(&energy, &cs)| cs * energy * (-energy / (temperature * temp_conversion)).exp())
             .collect::<Vec<_>>();
 
-        let mut result = grid.integrate(&integrand);
+        let mut result = integrator.integrate(&integrand);
 
         // Factor in front
         result = result
@@ -355,7 +361,7 @@ async fn process_result_set(
         rate_vec.push(result);
 
         if let Some((_, send)) = &output_integrands_data {
-            if let Err(err) = send.send((, temperature, integrand)) {
+            if let Err(err) = send.send((temperature, integrand)) {
                 diagnostics.write_log_background(
                     warn!("Failed to send integrand across channel.")
                         .with_sublog(error!("{}", err)),
