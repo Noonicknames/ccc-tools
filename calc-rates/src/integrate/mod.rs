@@ -22,8 +22,15 @@ pub enum IntegrationKind {
 
 pub trait Integrator: Send + Sync {
     fn integrate(&self, ys: &[f64]) -> f64;
+
+    fn integrate_weighted(&self, ys: &[f64], weight: &mut dyn FnMut(f64) -> f64) -> f64;
     fn integrate_len(&self) -> usize;
 
+    fn interpolation_weighted<'a>(&self, xs: &'a [f64], ys: &'a [f64], weight: &mut (dyn FnMut(f64) -> f64 + Send)) -> Option<Box<dyn Interpolation + 'a>> {
+        assert_eq!(xs.len(), ys.len());
+        _ = (xs, ys, weight);
+        None
+    }
     /// Return an interpolation implementing [Interpolation], if supported.
     fn interpolation<'a>(
         &self,
@@ -36,9 +43,219 @@ pub trait Integrator: Send + Sync {
     }
 }
 
+fn kahan_sum(nums: impl Iterator<Item = f64>) -> f64 {
+    let mut sum = 0.0;
+    let mut c = 0.0;
+
+    nums.for_each(|num| {
+        let y = num - c;
+        let t = sum + y;
+
+        c = (t - sum) - y;
+
+        sum = y;
+    });
+
+    sum
+}
+
 pub trait Interpolation: Send + Sync {
     fn interpolate_range(&self) -> RangeInclusive<f64>;
     fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()>;
+    fn integral(&self, epsilon: f64) -> f64 {
+        let interpolate_range = self.interpolate_range();
+
+        let mut intervals = 16;
+
+        let mut xs = Vec::from_iter((0..=intervals).map(|i| {
+            let t = i as f64 / intervals as f64;
+            t * interpolate_range.end() + (1.0 - t) * interpolate_range.start()
+        }));
+
+        let mut prev_answer = {
+            let step = (interpolate_range.end() - interpolate_range.start()) / intervals as f64;
+            let ys = self
+                .interpolate(&mut xs)
+                .expect("All xs were within the interpolation range, should not error.");
+
+            let mut result = 0.0;
+
+            // Boole's rule
+            result += 7.0 * (ys[0] + ys[intervals]);
+
+            result += 32.0 * kahan_sum(ys.iter().skip(1).step_by(2).cloned());
+            result += 12.0 * kahan_sum(ys.iter().skip(2).step_by(4).cloned());
+            result += 14.0 * kahan_sum(ys.iter().skip(4).step_by(4).cloned());
+
+            result = result * step * 2.0 / 45.0;
+
+            result
+        };
+
+        loop {
+            intervals *= 2;
+            let mut new_xs = Vec::from_iter((0..intervals).map(|i| {
+                let t = (2 * i + 1) as f64 / intervals as f64;
+                t * interpolate_range.end() + (1.0 - t) * interpolate_range.start()
+            }));
+
+            let new_ys = self
+                .interpolate(&mut new_xs)
+                .expect("All xs were within interpolation range, should not error.");
+
+            xs = xs
+                .iter()
+                .zip(new_ys.iter())
+                .flat_map(|(&x, &y)| [x, y])
+                .collect::<Vec<f64>>();
+
+            let current_answer = {
+                let ys = &xs;
+                let step = (interpolate_range.end() - interpolate_range.start()) / intervals as f64;
+
+                let mut result = 0.0;
+
+                // Boole's rule
+                result += 7.0 * (ys[0] + ys[intervals]);
+
+                result += 32.0 * kahan_sum(ys.iter().skip(1).step_by(2).cloned());
+                result += 12.0 * kahan_sum(ys.iter().skip(2).step_by(4).cloned());
+                result += 14.0 * kahan_sum(ys.iter().skip(4).step_by(4).cloned());
+
+                result = result * step * 2.0 / 45.0;
+
+                result
+            };
+
+            if (current_answer - prev_answer).abs() < epsilon {
+                break current_answer;
+            } else {
+                prev_answer = current_answer;
+            }
+        }
+    }
+}
+
+pub struct ApplyFunc<I, F>
+where
+    F: Fn(f64) -> f64 + Sync + Send,
+{
+    inner: I,
+    func: F,
+}
+
+impl<I, F> ApplyFunc<I, F>
+where
+    F: Fn(f64) -> f64 + Sync + Send,
+{
+    pub fn new(inner: I, func: F) -> Self {
+        Self { inner, func }
+    }
+}
+
+impl<I, F> Interpolation for ApplyFunc<I, F>
+where
+    I: Interpolation,
+    F: Fn(f64) -> f64 + Sync + Send,
+{
+    fn integral(&self, epsilon: f64) -> f64 {
+        let interpolate_range = self.interpolate_range();
+
+        let mut intervals = 16;
+
+        let mut xs = Vec::from_iter((0..=intervals).map(|i| {
+            let t = i as f64 / intervals as f64;
+            t * interpolate_range.end() + (1.0 - t) * interpolate_range.start()
+        }));
+
+        let mut prev_answer = {
+            let step = (interpolate_range.end() - interpolate_range.start()) / intervals as f64;
+            let ys = self
+                .interpolate(&mut xs)
+                .expect("All xs were within the interpolation range, should not error.");
+
+            ys.iter_mut().for_each(|y| *y = (self.func)(*y));
+
+            let mut result = 0.0;
+
+            // Boole's rule
+            result += 7.0 * (ys[0] + ys[intervals]);
+
+            result += 32.0 * kahan_sum(ys.iter().skip(1).step_by(2).cloned());
+            result += 12.0 * kahan_sum(ys.iter().skip(2).step_by(4).cloned());
+            result += 14.0 * kahan_sum(ys.iter().skip(4).step_by(4).cloned());
+
+            result = result * step * 2.0 / 45.0;
+
+            result
+        };
+
+        loop {
+            intervals *= 2;
+            let mut new_xs = Vec::from_iter((0..intervals).map(|i| {
+                let t = (2 * i + 1) as f64 / intervals as f64;
+                t * interpolate_range.end() + (1.0 - t) * interpolate_range.start()
+            }));
+
+            let new_ys = self
+                .interpolate(&mut new_xs)
+                .expect("All xs were within interpolation range, should not error.");
+
+            new_ys.iter_mut().for_each(|y| *y = (self.func)(*y));
+
+            xs = xs
+                .iter()
+                .zip(new_ys.iter())
+                .flat_map(|(&x, &y)| [x, y])
+                .collect::<Vec<f64>>();
+
+            let current_answer = {
+                let ys = &xs;
+                let step = (interpolate_range.end() - interpolate_range.start()) / intervals as f64;
+
+                let mut result = 0.0;
+
+                // Boole's rule
+                result += 7.0 * (ys[0] + ys[intervals]);
+
+                result += 32.0 * kahan_sum(ys.iter().skip(1).step_by(2).cloned());
+                result += 12.0 * kahan_sum(ys.iter().skip(2).step_by(4).cloned());
+                result += 14.0 * kahan_sum(ys.iter().skip(4).step_by(4).cloned());
+
+                result = result * step * 2.0 / 45.0;
+
+                result
+            };
+
+            if (current_answer - prev_answer).abs() < epsilon {
+                break current_answer;
+            } else {
+                prev_answer = current_answer;
+            }
+        }
+    }
+    fn interpolate_range(&self) -> RangeInclusive<f64> {
+        self.inner.interpolate_range()
+    }
+    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
+        let ys = self.inner.interpolate(xs)?;
+        ys.iter_mut().for_each(|y| *y = (self.func)(*y));
+        Ok(ys)
+    }
+}
+
+impl<F> Interpolation for ApplyFunc<Box<dyn Interpolation>, F>
+where
+    F: Fn(f64) -> f64 + Sync + Send,
+{
+    fn interpolate_range(&self) -> RangeInclusive<f64> {
+        self.inner.interpolate_range()
+    }
+    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
+        let ys = self.inner.interpolate(xs)?;
+        ys.iter_mut().for_each(|y| *y = (self.func)(*y));
+        Ok(ys)
+    }
 }
 
 pub struct SubIntegrators {
