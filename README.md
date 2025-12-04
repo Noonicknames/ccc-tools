@@ -1,6 +1,6 @@
 # CCC Tools
 
-<a href="https://noonicknames.github.io/ccc-tools/">Reference</a>
+<a href="https://noonicknames.github.io/ccc-tools/book/"><b>Read the book 📖</b></a>
 
 This is a collection of tools used for CCC related work.
 
@@ -10,8 +10,11 @@ This is a collection of tools used for CCC related work.
 
 Used for extracting cross section results.
 ## calc-rates
-![Static Badge](https://img.shields.io/badge/book-calc--rates-blue?logo=mdbook&link=ttps%3A%2F%2Fnoonicknames.github.io%2Fccc-tools%2Fbook%2Fcalc-rates.html)
-![Static Badge](https://img.shields.io/badge/doc-calc--rates-blue?logo=docsdotrs&link=https%3A%2F%2Fnoonicknames.github.io%2Fccc-tools%2Fdoc%2Fcalc_rates%2Findex.html)
+<a href="https://noonicknames.github.io/ccc-tools/book/calc-rates.html"><img alt="calc-rates book" src="https://img.shields.io/badge/doc-calc--rates-blue?logo=mdbook
+"></a>
+<a href="https://noonicknames.github.io/ccc-tools/doc/calc_rates/index.html"><img alt="calc-rates doc" src="https://img.shields.io/badge/doc-calc--rates-blue?logo=docsdotrs"></a>
+<br>
+<br>
 Used for calculating collision rates from cross section data.
 
 # Building
