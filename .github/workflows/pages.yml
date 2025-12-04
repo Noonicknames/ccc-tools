@@ -42,6 +42,9 @@ jobs:
       - name: Build mdBook
         run: mdbook build book
 
+      - name: Build mdbook-katex
+        run: cargo install mdbook-katex --git "https://github.com/lzanini/mdbook-katex"
+
       - name: Build docs
         run: cargo doc --no-deps --workspace
 
