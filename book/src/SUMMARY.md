@@ -1,3 +1,4 @@
 # Summary
 
-- [Chapter 1](./chapter_1.md)
+- [Introduction](./Introduction.md)
+- [calc-rates](./calc-rates.md)

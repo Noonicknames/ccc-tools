@@ -4,4 +4,4 @@ authors = ["Noon"]
 language = "en"
 
 [output.html]
-site-url = "/book/"
+site-url = "/ccc-tools/"
