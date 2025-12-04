@@ -49,7 +49,7 @@ jobs:
         run: |
           mkdir -p site/book
           mkdir -p site/doc
-          cp -r book/book* site/book/
+          cp -r book/book/* site/book/
           cp -r target/doc/* site/doc/
 
       - name: Setup Pages
