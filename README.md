@@ -10,8 +10,7 @@ This is a collection of tools used for CCC related work.
 
 Used for extracting cross section results.
 ## calc-rates
-<a href="https://noonicknames.github.io/ccc-tools/book/calc-rates.html"><img alt="calc-rates book" src="https://img.shields.io/badge/doc-calc--rates-blue?logo=mdbook
-"></a>
+<a href="https://noonicknames.github.io/ccc-tools/book/calc-rates.html"><img alt="calc-rates book" src="https://img.shields.io/badge/doc-calc--rates-blue?logo=mdbook"></a>
 <a href="https://noonicknames.github.io/ccc-tools/doc/calc_rates/index.html"><img alt="calc-rates doc" src="https://img.shields.io/badge/doc-calc--rates-blue?logo=docsdotrs"></a>
 <br>
 <br>
