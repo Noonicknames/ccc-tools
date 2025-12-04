@@ -5,3 +5,6 @@ language = "en"
 
 [output.html]
 site-url = "/ccc-tools/"
+
+[preprocessor.katex]
+after = ["links"]
