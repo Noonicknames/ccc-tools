@@ -26,7 +26,7 @@ pub trait Integrator: Send + Sync {
     fn integrate_mapped(
         &self,
         ys: &[f64],
-        map: &(dyn Fn(f64, f64) -> f64 + Send + Sync),
+        map: &(dyn Fn(&[f64], &mut [f64]) + Send + Sync),
         epsilon: f64,
     ) -> f64;
     fn integrate_len(&self) -> usize;
@@ -35,7 +35,7 @@ pub trait Integrator: Send + Sync {
         &self,
         xs: &'a [f64],
         ys: &'a [f64],
-        map: &'a (dyn Fn(f64, f64) -> f64 + Send + Sync + 'a),
+        map: &'a (dyn Fn(&[f64], &mut [f64]) + Send + Sync + 'a),
     ) -> Option<Box<dyn Interpolation + 'a>> {
         assert_eq!(xs.len(), ys.len());
         _ = (xs, ys, map);
@@ -106,7 +106,7 @@ pub trait Interpolation: Send + Sync {
 
         loop {
             let new_xs = Vec::from_iter((0..intervals).map(|i| {
-                let t = (2 * i + 1) as f64 / (2*intervals) as f64;
+                let t = (2 * i + 1) as f64 / (2 * intervals) as f64;
                 t * interpolate_range.end() + (1.0 - t) * interpolate_range.start()
             }));
 
@@ -156,7 +156,7 @@ pub trait Interpolation: Send + Sync {
 
 pub struct ApplyFunc<I, F>
 where
-    F: Fn(f64, f64) -> f64 + Sync + Send,
+    F: Fn(&[f64], &mut [f64]) + Sync + Send,
 {
     inner: I,
     func: F,
@@ -164,7 +164,7 @@ where
 
 impl<I, F> ApplyFunc<I, F>
 where
-    F: Fn(f64, f64) -> f64 + Sync + Send,
+    F: Fn(&[f64], &mut [f64]) + Sync + Send,
 {
     pub fn new(inner: I, func: F) -> Self {
         Self { inner, func }
@@ -174,32 +174,30 @@ where
 impl<I, F> Interpolation for ApplyFunc<I, F>
 where
     I: Interpolation,
-    F: Fn(f64, f64) -> f64 + Sync + Send,
+    F: Fn(&[f64], &mut [f64]) + Sync + Send,
 {
     fn interpolate_range(&self) -> RangeInclusive<f64> {
         self.inner.interpolate_range()
     }
     fn interpolate<'a>(&self, xs: &[f64], ys_out: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
         let ys = self.inner.interpolate(xs, ys_out)?;
-        ys.iter_mut()
-            .zip(xs.iter())
-            .for_each(|(y, &x)| *y = (self.func)(x, *y));
+
+        (self.func)(xs, ys);
+
         Ok(ys)
     }
 }
 
 impl<F> Interpolation for ApplyFunc<Box<dyn Interpolation>, F>
 where
-    F: Fn(f64, f64) -> f64 + Sync + Send,
+    F: Fn(&[f64], &mut [f64]) + Sync + Send,
 {
     fn interpolate_range(&self) -> RangeInclusive<f64> {
         self.inner.interpolate_range()
     }
     fn interpolate<'a>(&self, xs: &[f64], ys_out: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
         let ys = self.inner.interpolate(xs, ys_out)?;
-        ys.iter_mut()
-            .zip(xs.iter())
-            .for_each(|(y, &x)| *y = (self.func)(x, *y));
+        (self.func)(xs, ys);
         Ok(ys)
     }
 }
@@ -230,7 +228,7 @@ impl SubIntegrators {
         map: M,
     ) -> ApplyFunc<SubInterpolations<'a>, M>
     where
-        M: Fn(f64, f64) -> f64 + Sync + Send + 'a,
+        M: Fn(&[f64], &mut [f64]) + Sync + Send + 'a,
     {
         assert_eq!(xs.len(), ys.len());
         let mut subinterpolations = SubInterpolations::empty();
@@ -286,7 +284,7 @@ impl Integrator for SubIntegrators {
     fn integrate_mapped(
         &self,
         ys: &[f64],
-        map: &(dyn Fn(f64, f64) -> f64 + Send + Sync),
+        map: &(dyn Fn(&[f64], &mut [f64]) + Send + Sync),
         epsilon: f64,
     ) -> f64 {
         self.partial
@@ -301,7 +299,7 @@ impl Integrator for SubIntegrators {
         &self,
         xs: &'a [f64],
         ys: &'a [f64],
-        map: &'a (dyn Fn(f64, f64) -> f64 + Send + Sync + 'a),
+        map: &'a (dyn Fn(&[f64], &mut [f64]) + Send + Sync + 'a),
     ) -> Option<Box<dyn Interpolation + 'a>> {
         Some(Box::new(self.interpolation_mapped(xs, ys, map)))
     }
@@ -469,7 +467,7 @@ impl Integrator for MonotoneCubicIntegrator {
     fn integrate_mapped(
         &self,
         ys: &[f64],
-        map: &(dyn Fn(f64, f64) -> f64 + Send + Sync),
+        map: &(dyn Fn(&[f64], &mut [f64]) + Send + Sync),
         epsilon: f64,
     ) -> f64 {
         self.interpolation_mapped(ys, map).integral(epsilon)
@@ -478,7 +476,7 @@ impl Integrator for MonotoneCubicIntegrator {
         &self,
         _xs: &'a [f64],
         ys: &'a [f64],
-        map: &'a (dyn Fn(f64, f64) -> f64 + Send + Sync + 'a),
+        map: &'a (dyn Fn(&[f64], &mut [f64]) + Send + Sync + 'a),
     ) -> Option<Box<dyn Interpolation + 'a>> {
         Some(Box::new(ApplyFunc::new(self.interpolation(ys), map)))
     }
@@ -506,7 +504,7 @@ impl MonotoneCubicIntegrator {
     ) -> ApplyFunc<MonotoneCubicInterpolation<Y>, M>
     where
         Y: AsRef<[f64]>,
-        M: Fn(f64, f64) -> f64 + Send + Sync,
+        M: Fn(&[f64], &mut [f64]) + Send + Sync,
     {
         ApplyFunc::new(self.interpolation(ys), map)
     }
@@ -704,7 +702,7 @@ impl Integrator for NaturalCubicIntegrator {
     fn integrate_mapped(
         &self,
         ys: &[f64],
-        map: &(dyn Fn(f64, f64) -> f64 + Send + Sync),
+        map: &(dyn Fn(&[f64], &mut [f64]) + Send + Sync),
         epsilon: f64,
     ) -> f64 {
         self.interpolation_mapped(ys, map).integral(epsilon)
@@ -713,7 +711,7 @@ impl Integrator for NaturalCubicIntegrator {
         &self,
         _xs: &'a [f64],
         ys: &'a [f64],
-        map: &'a (dyn Fn(f64, f64) -> f64 + Send + Sync + 'a),
+        map: &'a (dyn Fn(&[f64], &mut [f64]) + Send + Sync + 'a),
     ) -> Option<Box<dyn Interpolation + 'a>> {
         Some(Box::new(self.interpolation_mapped(ys, map)))
     }
@@ -772,7 +770,7 @@ impl NaturalCubicIntegrator {
     ) -> ApplyFunc<NaturalCubicInterpolation<Y>, M>
     where
         Y: AsRef<[f64]>,
-        M: Fn(f64, f64) -> f64 + Send + Sync,
+        M: Fn(&[f64], &mut [f64]) + Send + Sync,
     {
         ApplyFunc::new(self.interpolation(ys), map)
     }
@@ -946,17 +944,12 @@ impl Integrator for GaussIntegrator {
     fn integrate_mapped(
         &self,
         ys: &[f64],
-        map: &(dyn Fn(f64, f64) -> f64 + Send + Sync),
+        map: &(dyn Fn(&[f64], &mut [f64]) + Send + Sync),
         _epsilon: f64,
     ) -> f64 {
-        let ys = Vec::from_iter(
-            self.grid
-                .points
-                .iter()
-                .cloned()
-                .zip(ys.iter().cloned())
-                .map(|(x, y)| (map)(x, y)),
-        );
+        let mut ys = ys.to_vec();
+
+        (map)(self.grid.points.as_slice(), &mut ys);
         self.grid.eval(&ys)
     }
     fn integrate(&self, ys: &[f64], _epsilon: f64) -> f64 {

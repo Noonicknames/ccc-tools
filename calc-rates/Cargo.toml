@@ -26,3 +26,4 @@ ron.workspace = true
 unicode-width.workspace = true
 ordered-float.workspace = true
 futures.workspace = true
+rayon.workspace = true

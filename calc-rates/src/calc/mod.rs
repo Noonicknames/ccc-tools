@@ -17,6 +17,7 @@ use diagnostics::{
 use futures::stream::FuturesUnordered;
 use la::{BlasLib, LapackeLib};
 use ordered_float::OrderedFloat;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tokio::{
     fs::OpenOptions,
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
@@ -139,14 +140,14 @@ pub async fn cmd_calc(
         let temperatures = Arc::clone(&temperatures);
         let output_folder = Arc::clone(&output_folder);
 
-        tasks.push(process_result_set(
+        tasks.push(tokio::spawn(process_result_set(
             result_set,
             temperatures,
             temperature_units,
             collision_rate_units,
             output_folder,
             diagnostics_copy,
-        ));
+        )));
     }
 
     while let Some(result) = tasks.next().await {
@@ -281,35 +282,41 @@ async fn output_rates_data(
     integrator: Arc<SubIntegrators>,
     temperature_units: TemperatureUnits,
 ) -> Result<(), std::io::Error> {
-    let mut rate_vec = Vec::with_capacity(temperatures.len());
-
     let temp_conversion =
         TemperatureUnits::conversion_factor(temperature_units, TemperatureUnits::Hartree);
 
     let rate_conversion =
         CollisionRateUnits::conversion_factor(CollisionRateUnits::Atomic, rate_units);
 
+    let rate_vec;
+
     bench_time!(format!("Integration `{}`", name), {
-        for &temperature in temperatures.iter() {
-            // Integrand according to Joel
-            // Atomic units kB = 1, T is converted to Hartree, energy in hartree
-            // x is energy, y is cross section
-            let weight = move |x: f64, y: f64| -> f64 {
-                y * x * (-x / (temperature * temp_conversion)).exp()
-            };
+        rate_vec = temperatures
+            .par_iter()
+            .map(|temperature| {
+                let recip_temp = 1.0 / (temperature * temp_conversion);
+                // Integrand according to Joel
+                // Atomic units kB = 1, T is converted to Hartree, energy in hartree
+                // x is energy, y is cross section
+                let map = move |x: &[f64], y: &mut [f64]| {
+                    x.iter()
+                        .zip(y.iter_mut())
+                        .for_each(|(&x, y)| *y = *y * x * (-x * recip_temp).exp());
+                };
 
-            let mut result = integrator.integrate_mapped(&cs_vec, &weight, 1e-6);
+                let mut result = integrator.integrate_mapped(&cs_vec, &map, 1e-6);
 
-            // Factor in front
-            result = result
-                * std::f64::consts::PI.sqrt().recip()
-                * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
+                // Factor in front
+                result = result
+                    * std::f64::consts::PI.sqrt().recip()
+                    * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
 
-            // Convert to desired units
-            result = result * rate_conversion;
+                // Convert to desired units
+                result = result * rate_conversion;
 
-            rate_vec.push(result);
-        }
+                result
+            })
+            .collect::<Vec<_>>();
     });
 
     // Output results
@@ -380,9 +387,12 @@ async fn output_integrands_data(
         let temperature_conversion =
             TemperatureUnits::conversion_factor(temperature_units, TemperatureUnits::Hartree);
         tasks.push(tokio::spawn(async move {
+            let recip_temp = 1.0 / (temperature * temperature_conversion);
             let interpolation =
                 integrator.interpolation_mapped(energy_vec.as_slice(), &cs_vec, move |x, y| {
-                    y * x * (-x / (temperature * temperature_conversion)).exp()
+                    x.iter()
+                        .zip(y.iter_mut())
+                        .map(|(&x, y)| *y = *y * x * (-x * recip_temp).exp());
                 });
 
             let mut ys_buf = vec![0.0; dense_x_grid.len()];
