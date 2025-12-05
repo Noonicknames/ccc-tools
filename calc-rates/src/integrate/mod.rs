@@ -21,14 +21,24 @@ pub enum IntegrationKind {
 }
 
 pub trait Integrator: Send + Sync {
-    fn integrate(&self, ys: &[f64]) -> f64;
+    fn integrate(&self, ys: &[f64], epsilon: f64) -> f64;
 
-    fn integrate_weighted(&self, ys: &[f64], weight: &mut dyn FnMut(f64) -> f64) -> f64;
+    fn integrate_mapped(
+        &self,
+        ys: &[f64],
+        map: &(dyn Fn(f64, f64) -> f64 + Send + Sync),
+        epsilon: f64,
+    ) -> f64;
     fn integrate_len(&self) -> usize;
 
-    fn interpolation_weighted<'a>(&self, xs: &'a [f64], ys: &'a [f64], weight: &mut (dyn FnMut(f64) -> f64 + Send)) -> Option<Box<dyn Interpolation + 'a>> {
+    fn interpolation_mapped<'a>(
+        &self,
+        xs: &'a [f64],
+        ys: &'a [f64],
+        map: &'a (dyn Fn(f64, f64) -> f64 + Send + Sync + 'a),
+    ) -> Option<Box<dyn Interpolation + 'a>> {
         assert_eq!(xs.len(), ys.len());
-        _ = (xs, ys, weight);
+        _ = (xs, ys, map);
         None
     }
     /// Return an interpolation implementing [Interpolation], if supported.
@@ -53,7 +63,7 @@ fn kahan_sum(nums: impl Iterator<Item = f64>) -> f64 {
 
         c = (t - sum) - y;
 
-        sum = y;
+        sum = t;
     });
 
     sum
@@ -61,21 +71,23 @@ fn kahan_sum(nums: impl Iterator<Item = f64>) -> f64 {
 
 pub trait Interpolation: Send + Sync {
     fn interpolate_range(&self) -> RangeInclusive<f64>;
-    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()>;
+    fn interpolate<'a>(&self, xs: &[f64], ys_out: &'a mut [f64]) -> Result<&'a mut [f64], ()>;
     fn integral(&self, epsilon: f64) -> f64 {
         let interpolate_range = self.interpolate_range();
 
-        let mut intervals = 16;
+        let mut intervals = 128;
 
-        let mut xs = Vec::from_iter((0..=intervals).map(|i| {
+        let xs = Vec::from_iter((0..=intervals).map(|i| {
             let t = i as f64 / intervals as f64;
             t * interpolate_range.end() + (1.0 - t) * interpolate_range.start()
         }));
 
+        let mut ys_buf = vec![0.0; xs.len()];
+
         let mut prev_answer = {
             let step = (interpolate_range.end() - interpolate_range.start()) / intervals as f64;
             let ys = self
-                .interpolate(&mut xs)
+                .interpolate(&xs, &mut ys_buf)
                 .expect("All xs were within the interpolation range, should not error.");
 
             let mut result = 0.0;
@@ -93,24 +105,30 @@ pub trait Interpolation: Send + Sync {
         };
 
         loop {
-            intervals *= 2;
-            let mut new_xs = Vec::from_iter((0..intervals).map(|i| {
-                let t = (2 * i + 1) as f64 / intervals as f64;
+            let new_xs = Vec::from_iter((0..intervals).map(|i| {
+                let t = (2 * i + 1) as f64 / (2*intervals) as f64;
                 t * interpolate_range.end() + (1.0 - t) * interpolate_range.start()
             }));
 
+            intervals *= 2;
+
+            let mut new_ys_buf = vec![0.0; new_xs.len()];
+
             let new_ys = self
-                .interpolate(&mut new_xs)
+                .interpolate(&new_xs, &mut new_ys_buf)
                 .expect("All xs were within interpolation range, should not error.");
 
-            xs = xs
+            assert_eq!(ys_buf.len(), new_ys.len() + 1);
+
+            ys_buf = ys_buf
                 .iter()
                 .zip(new_ys.iter())
                 .flat_map(|(&x, &y)| [x, y])
+                .chain(ys_buf.last().cloned())
                 .collect::<Vec<f64>>();
 
             let current_answer = {
-                let ys = &xs;
+                let ys = &ys_buf;
                 let step = (interpolate_range.end() - interpolate_range.start()) / intervals as f64;
 
                 let mut result = 0.0;
@@ -138,7 +156,7 @@ pub trait Interpolation: Send + Sync {
 
 pub struct ApplyFunc<I, F>
 where
-    F: Fn(f64) -> f64 + Sync + Send,
+    F: Fn(f64, f64) -> f64 + Sync + Send,
 {
     inner: I,
     func: F,
@@ -146,7 +164,7 @@ where
 
 impl<I, F> ApplyFunc<I, F>
 where
-    F: Fn(f64) -> f64 + Sync + Send,
+    F: Fn(f64, f64) -> f64 + Sync + Send,
 {
     pub fn new(inner: I, func: F) -> Self {
         Self { inner, func }
@@ -156,104 +174,32 @@ where
 impl<I, F> Interpolation for ApplyFunc<I, F>
 where
     I: Interpolation,
-    F: Fn(f64) -> f64 + Sync + Send,
+    F: Fn(f64, f64) -> f64 + Sync + Send,
 {
-    fn integral(&self, epsilon: f64) -> f64 {
-        let interpolate_range = self.interpolate_range();
-
-        let mut intervals = 16;
-
-        let mut xs = Vec::from_iter((0..=intervals).map(|i| {
-            let t = i as f64 / intervals as f64;
-            t * interpolate_range.end() + (1.0 - t) * interpolate_range.start()
-        }));
-
-        let mut prev_answer = {
-            let step = (interpolate_range.end() - interpolate_range.start()) / intervals as f64;
-            let ys = self
-                .interpolate(&mut xs)
-                .expect("All xs were within the interpolation range, should not error.");
-
-            ys.iter_mut().for_each(|y| *y = (self.func)(*y));
-
-            let mut result = 0.0;
-
-            // Boole's rule
-            result += 7.0 * (ys[0] + ys[intervals]);
-
-            result += 32.0 * kahan_sum(ys.iter().skip(1).step_by(2).cloned());
-            result += 12.0 * kahan_sum(ys.iter().skip(2).step_by(4).cloned());
-            result += 14.0 * kahan_sum(ys.iter().skip(4).step_by(4).cloned());
-
-            result = result * step * 2.0 / 45.0;
-
-            result
-        };
-
-        loop {
-            intervals *= 2;
-            let mut new_xs = Vec::from_iter((0..intervals).map(|i| {
-                let t = (2 * i + 1) as f64 / intervals as f64;
-                t * interpolate_range.end() + (1.0 - t) * interpolate_range.start()
-            }));
-
-            let new_ys = self
-                .interpolate(&mut new_xs)
-                .expect("All xs were within interpolation range, should not error.");
-
-            new_ys.iter_mut().for_each(|y| *y = (self.func)(*y));
-
-            xs = xs
-                .iter()
-                .zip(new_ys.iter())
-                .flat_map(|(&x, &y)| [x, y])
-                .collect::<Vec<f64>>();
-
-            let current_answer = {
-                let ys = &xs;
-                let step = (interpolate_range.end() - interpolate_range.start()) / intervals as f64;
-
-                let mut result = 0.0;
-
-                // Boole's rule
-                result += 7.0 * (ys[0] + ys[intervals]);
-
-                result += 32.0 * kahan_sum(ys.iter().skip(1).step_by(2).cloned());
-                result += 12.0 * kahan_sum(ys.iter().skip(2).step_by(4).cloned());
-                result += 14.0 * kahan_sum(ys.iter().skip(4).step_by(4).cloned());
-
-                result = result * step * 2.0 / 45.0;
-
-                result
-            };
-
-            if (current_answer - prev_answer).abs() < epsilon {
-                break current_answer;
-            } else {
-                prev_answer = current_answer;
-            }
-        }
-    }
     fn interpolate_range(&self) -> RangeInclusive<f64> {
         self.inner.interpolate_range()
     }
-    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
-        let ys = self.inner.interpolate(xs)?;
-        ys.iter_mut().for_each(|y| *y = (self.func)(*y));
+    fn interpolate<'a>(&self, xs: &[f64], ys_out: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
+        let ys = self.inner.interpolate(xs, ys_out)?;
+        ys.iter_mut()
+            .zip(xs.iter())
+            .for_each(|(y, &x)| *y = (self.func)(x, *y));
         Ok(ys)
     }
 }
 
 impl<F> Interpolation for ApplyFunc<Box<dyn Interpolation>, F>
 where
-    F: Fn(f64) -> f64 + Sync + Send,
+    F: Fn(f64, f64) -> f64 + Sync + Send,
 {
     fn interpolate_range(&self) -> RangeInclusive<f64> {
         self.inner.interpolate_range()
     }
-    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
-        let ys = self.inner.interpolate(xs)?;
-        ys.iter_mut().for_each(|y| *y = (self.func)(*y));
+    fn interpolate<'a>(&self, xs: &[f64], ys_out: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
+        let ys = self.inner.interpolate(xs, ys_out)?;
+        ys.iter_mut()
+            .zip(xs.iter())
+            .for_each(|(y, &x)| *y = (self.func)(x, *y));
         Ok(ys)
     }
 }
@@ -275,6 +221,39 @@ impl SubIntegrators {
 
     pub fn push_boxed(&mut self, range: Range<usize>, partial_integrator: Box<dyn Integrator>) {
         self.partial.push((range, partial_integrator));
+    }
+
+    pub fn interpolation_mapped<'a, M>(
+        &self,
+        xs: &'a [f64],
+        ys: &'a [f64],
+        map: M,
+    ) -> ApplyFunc<SubInterpolations<'a>, M>
+    where
+        M: Fn(f64, f64) -> f64 + Sync + Send + 'a,
+    {
+        assert_eq!(xs.len(), ys.len());
+        let mut subinterpolations = SubInterpolations::empty();
+        for (range, integrator) in self.partial.iter() {
+            if let Some(interpolation) =
+                integrator.interpolation(&xs[range.clone()], &ys[range.clone()])
+            {
+                subinterpolations.partials.push(interpolation);
+            } else {
+                // println!(
+                //     "Got linear interpolator between {} and {}",
+                //     xs[range.start],
+                //     ys[range.end - 1]
+                // );
+                subinterpolations
+                    .partials
+                    .push(Box::new(LinearInterpolation::new(
+                        &xs[range.clone()],
+                        &ys[range.clone()],
+                    )));
+            }
+        }
+        ApplyFunc::new(subinterpolations, map)
     }
 
     pub fn interpolation<'a>(&self, xs: &'a [f64], ys: &'a [f64]) -> SubInterpolations<'a> {
@@ -304,10 +283,32 @@ impl SubIntegrators {
 }
 
 impl Integrator for SubIntegrators {
-    fn integrate(&self, ys: &[f64]) -> f64 {
+    fn integrate_mapped(
+        &self,
+        ys: &[f64],
+        map: &(dyn Fn(f64, f64) -> f64 + Send + Sync),
+        epsilon: f64,
+    ) -> f64 {
         self.partial
             .iter()
-            .map(|(range, integrator)| integrator.integrate(&ys[range.clone()]))
+            .map(|(range, integrator)| {
+                integrator.integrate_mapped(&ys[range.clone()], map, epsilon)
+            })
+            .sum()
+    }
+
+    fn interpolation_mapped<'a>(
+        &self,
+        xs: &'a [f64],
+        ys: &'a [f64],
+        map: &'a (dyn Fn(f64, f64) -> f64 + Send + Sync + 'a),
+    ) -> Option<Box<dyn Interpolation + 'a>> {
+        Some(Box::new(self.interpolation_mapped(xs, ys, map)))
+    }
+    fn integrate(&self, ys: &[f64], epsilon: f64) -> f64 {
+        self.partial
+            .iter()
+            .map(|(range, integrator)| integrator.integrate(&ys[range.clone()], epsilon))
             .sum()
     }
     fn integrate_len(&self) -> usize {
@@ -362,24 +363,24 @@ impl<'s> LinearInterpolation<'s> {
         }
     }
 
-    pub fn eval_many(&self, xs: &mut [f64]) {
+    pub fn eval_many(&self, xs: &[f64], ys_out: &mut [f64]) {
         if self.x_vec.is_empty() {
-            xs.iter_mut().for_each(|x| *x = 0.0);
+            ys_out.iter_mut().for_each(|y| *y = 0.0);
             return;
         }
         let mut ptr = 0;
-        for x in xs.iter_mut() {
+        for (x, y) in xs.iter().zip(ys_out.iter_mut()) {
             while ptr < self.x_vec.len() - 1 && *x > self.x_vec[ptr + 1] {
                 ptr += 1;
             }
 
             if *x < self.x_vec[0] || ptr >= self.x_vec.len() - 1 {
-                *x = self.y_vec[ptr];
+                *y = self.y_vec[ptr];
             } else {
                 let t = (*x - self.x_vec[ptr]) / (self.x_vec[ptr + 1] - self.x_vec[ptr]);
                 assert!(t >= 0.0);
                 assert!(t <= 1.0);
-                *x = t * self.y_vec[ptr + 1] + (1.0 - t) * self.y_vec[ptr];
+                *y = t * self.y_vec[ptr + 1] + (1.0 - t) * self.y_vec[ptr];
             }
         }
     }
@@ -389,9 +390,9 @@ impl<'s> Interpolation for LinearInterpolation<'s> {
     fn interpolate_range(&self) -> RangeInclusive<f64> {
         self.x_vec.first().cloned().unwrap_or(0.0)..=self.x_vec.last().cloned().unwrap_or(0.0)
     }
-    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
-        self.eval_many(xs);
-        Ok(xs)
+    fn interpolate<'a>(&self, xs: &[f64], ys_out: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
+        self.eval_many(xs, ys_out);
+        Ok(ys_out)
     }
 }
 
@@ -422,7 +423,7 @@ impl<'s> Interpolation for SubInterpolations<'s> {
                 .map(|partial| partial.interpolate_range().start().clone())
                 .unwrap_or(0.0)
     }
-    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
+    fn interpolate<'a>(&self, xs: &[f64], ys_out: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
         let mut ptr = 0;
         for interpolation in self.partials.iter() {
             let range = interpolation.interpolate_range();
@@ -432,7 +433,7 @@ impl<'s> Interpolation for SubInterpolations<'s> {
                     Ok(idx) | Err(idx) => idx,
                 };
 
-            interpolation.interpolate(&mut xs[ptr..end])?;
+            interpolation.interpolate(&xs[ptr..end], &mut ys_out[ptr..end])?;
 
             ptr = end;
             if ptr == xs.len() {
@@ -442,13 +443,13 @@ impl<'s> Interpolation for SubInterpolations<'s> {
 
         if ptr != xs.len() {
             if let Some(interpolation) = self.partials.last() {
-                interpolation.interpolate(&mut xs[ptr..])?;
+                interpolation.interpolate(&xs[ptr..], &mut ys_out[ptr..])?;
             } else {
-                xs[ptr..].iter_mut().for_each(|x| *x = 0.0);
+                ys_out[ptr..].iter_mut().for_each(|x| *x = 0.0);
             }
         }
 
-        Ok(xs)
+        Ok(ys_out)
     }
 }
 pub struct MonotoneCubicIntegrator {
@@ -459,11 +460,27 @@ pub struct MonotoneCubicIntegrator {
 }
 
 impl Integrator for MonotoneCubicIntegrator {
-    fn integrate(&self, ys: &[f64]) -> f64 {
+    fn integrate(&self, ys: &[f64], _epsilon: f64) -> f64 {
         self.interpolation(ys).integral()
     }
     fn integrate_len(&self) -> usize {
         self.widths.len() + 1
+    }
+    fn integrate_mapped(
+        &self,
+        ys: &[f64],
+        map: &(dyn Fn(f64, f64) -> f64 + Send + Sync),
+        epsilon: f64,
+    ) -> f64 {
+        self.interpolation_mapped(ys, map).integral(epsilon)
+    }
+    fn interpolation_mapped<'a>(
+        &self,
+        _xs: &'a [f64],
+        ys: &'a [f64],
+        map: &'a (dyn Fn(f64, f64) -> f64 + Send + Sync + 'a),
+    ) -> Option<Box<dyn Interpolation + 'a>> {
+        Some(Box::new(ApplyFunc::new(self.interpolation(ys), map)))
     }
     fn interpolation<'a>(
         &self,
@@ -480,6 +497,18 @@ impl MonotoneCubicIntegrator {
         let widths = xs.windows(2).map(|window| window[1] - window[0]).collect();
 
         Self { range, widths }
+    }
+
+    fn interpolation_mapped<Y, M>(
+        &self,
+        ys: Y,
+        map: M,
+    ) -> ApplyFunc<MonotoneCubicInterpolation<Y>, M>
+    where
+        Y: AsRef<[f64]>,
+        M: Fn(f64, f64) -> f64 + Send + Sync,
+    {
+        ApplyFunc::new(self.interpolation(ys), map)
     }
 
     pub fn interpolation<Y>(&self, ys: Y) -> MonotoneCubicInterpolation<Y>
@@ -587,11 +616,11 @@ where
     }
 
     ///
-    pub fn eval_many(&self, xs: &mut [f64]) {
+    pub fn eval_many(&self, xs: &[f64], ys_out: &mut [f64]) {
         let mut current_x = *self.range.start();
         let mut idx = 0;
 
-        for x in xs.iter_mut() {
+        for (x, y) in xs.iter().zip(ys_out.iter_mut()) {
             let mut relative_x = *x - current_x;
 
             while idx < self.widths.len() && relative_x > self.widths[idx] {
@@ -601,7 +630,7 @@ where
             }
 
             if relative_x < 0.0 || idx >= self.widths.len() {
-                *x = self.y_vec.as_ref()[idx];
+                *y = self.y_vec.as_ref()[idx];
             } else {
                 let h00 = |t: f64| -> f64 { (1.0 + 2.0 * t) * (1.0 - t) * (1.0 - t) };
                 let h01 = |t: f64| -> f64 { t * t * (3.0 - 2.0 * t) };
@@ -612,7 +641,7 @@ where
 
                 assert!((0.0..=1.0).contains(&x_scaled));
 
-                *x = c0 * h00(x_scaled)
+                *y = c0 * h00(x_scaled)
                     + c1 * h01(x_scaled)
                     + c2 * h10(x_scaled)
                     + c3 * h11(x_scaled);
@@ -654,9 +683,9 @@ where
     fn interpolate_range(&self) -> RangeInclusive<f64> {
         self.range.clone()
     }
-    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
-        self.eval_many(xs);
-        Ok(xs)
+    fn interpolate<'a>(&self, xs: &[f64], ys_out: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
+        self.eval_many(xs, ys_out);
+        Ok(ys_out)
     }
 }
 
@@ -672,7 +701,23 @@ pub struct NaturalCubicIntegrator {
 }
 
 impl Integrator for NaturalCubicIntegrator {
-    fn integrate(&self, ys: &[f64]) -> f64 {
+    fn integrate_mapped(
+        &self,
+        ys: &[f64],
+        map: &(dyn Fn(f64, f64) -> f64 + Send + Sync),
+        epsilon: f64,
+    ) -> f64 {
+        self.interpolation_mapped(ys, map).integral(epsilon)
+    }
+    fn interpolation_mapped<'a>(
+        &self,
+        _xs: &'a [f64],
+        ys: &'a [f64],
+        map: &'a (dyn Fn(f64, f64) -> f64 + Send + Sync + 'a),
+    ) -> Option<Box<dyn Interpolation + 'a>> {
+        Some(Box::new(self.interpolation_mapped(ys, map)))
+    }
+    fn integrate(&self, ys: &[f64], _epsilon: f64) -> f64 {
         self.interpolation(ys).integral()
     }
     fn integrate_len(&self) -> usize {
@@ -718,6 +763,18 @@ impl NaturalCubicIntegrator {
 
             lapacke,
         }
+    }
+
+    fn interpolation_mapped<Y, M>(
+        &self,
+        ys: Y,
+        map: M,
+    ) -> ApplyFunc<NaturalCubicInterpolation<Y>, M>
+    where
+        Y: AsRef<[f64]>,
+        M: Fn(f64, f64) -> f64 + Send + Sync,
+    {
+        ApplyFunc::new(self.interpolation(ys), map)
     }
 
     pub fn interpolation<Y>(&self, ys: Y) -> NaturalCubicInterpolation<Y>
@@ -774,9 +831,9 @@ where
     fn interpolate_range(&self) -> RangeInclusive<f64> {
         self.range.clone()
     }
-    fn interpolate<'a>(&self, xs: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
-        self.eval_many(xs);
-        Ok(xs)
+    fn interpolate<'a>(&self, xs: &[f64], ys_out: &'a mut [f64]) -> Result<&'a mut [f64], ()> {
+        self.eval_many(xs, ys_out);
+        Ok(ys_out)
     }
 }
 
@@ -817,13 +874,13 @@ where
         (c0, c1, c2, c3)
     }
     ///
-    pub fn eval_many(&self, xs: &mut [f64]) {
+    pub fn eval_many(&self, xs: &[f64], ys_out: &mut [f64]) {
         let widths = self.widths.as_ref();
         let c0_buf = self.c0_buf.as_ref();
         let mut current_x = *self.range.start();
         let mut idx = 0;
 
-        for x in xs.iter_mut() {
+        for (x, y) in xs.iter().zip(ys_out.iter_mut()) {
             let mut relative_x = *x - current_x;
 
             while idx < widths.len() && relative_x > widths[idx] {
@@ -833,7 +890,7 @@ where
             }
 
             if relative_x < 0.0 || idx >= widths.len() {
-                *x = c0_buf[idx];
+                *y = c0_buf[idx];
             } else {
                 let h00 = |t: f64| -> f64 { (1.0 + 2.0 * t) * (1.0 - t) * (1.0 - t) };
                 let h01 = |t: f64| -> f64 { t * t * (3.0 - 2.0 * t) };
@@ -844,7 +901,7 @@ where
 
                 assert!((0.0..=1.0).contains(&x_scaled));
 
-                *x = c0 * h00(x_scaled)
+                *y = c0 * h00(x_scaled)
                     + c1 * h01(x_scaled)
                     + c2 * h10(x_scaled)
                     + c3 * h11(x_scaled);
@@ -886,7 +943,23 @@ pub struct GaussIntegrator {
 }
 
 impl Integrator for GaussIntegrator {
-    fn integrate(&self, ys: &[f64]) -> f64 {
+    fn integrate_mapped(
+        &self,
+        ys: &[f64],
+        map: &(dyn Fn(f64, f64) -> f64 + Send + Sync),
+        _epsilon: f64,
+    ) -> f64 {
+        let ys = Vec::from_iter(
+            self.grid
+                .points
+                .iter()
+                .cloned()
+                .zip(ys.iter().cloned())
+                .map(|(x, y)| (map)(x, y)),
+        );
+        self.grid.eval(&ys)
+    }
+    fn integrate(&self, ys: &[f64], _epsilon: f64) -> f64 {
         self.grid.eval(ys)
     }
     fn integrate_len(&self) -> usize {
@@ -929,7 +1002,7 @@ impl GaussIntegrator {
 
         let get_result = |istart: usize, iend: usize, x_points: &[f64]| -> (GaussIntegrator, f64) {
             let grid = GaussIntegrator::new(&x_points[istart..=iend]);
-            let val = grid.integrate(&integrand[istart..=iend]);
+            let val = grid.integrate(&integrand[istart..=iend], 0.0); // epsilon isd not used in gauss 
             (grid, val)
         };
 
@@ -1002,8 +1075,10 @@ mod tests {
 
         println!("Len: {}", interpolation.partials.len());
 
-        let mut many_result = test_xs_vec.clone();
-        interpolation.interpolate(&mut many_result).unwrap();
+        let mut many_result = vec![0.0; test_xs_vec.len()];
+        interpolation
+            .interpolate(&test_xs_vec, &mut many_result)
+            .unwrap();
 
         for (idx, x) in test_xs_vec.iter().enumerate() {
             let answer = test_func(*x);
@@ -1033,8 +1108,10 @@ mod tests {
 
         // let interpolation = subintegrators.interpolation(&xs_vec, &ys_vec);
 
-        let mut many_result = test_xs_vec.clone();
-        interpolation.interpolate(&mut many_result).unwrap();
+        let mut many_result = vec![0.0; test_xs_vec.len()];
+        interpolation
+            .interpolate(&test_xs_vec, &mut many_result)
+            .unwrap();
 
         for (idx, x) in test_xs_vec.iter().enumerate() {
             let answer = test_func(*x);
@@ -1067,8 +1144,10 @@ mod tests {
 
         let interpolation = integrator.interpolation(&ys_vec);
 
-        let mut many_result = test_xs_vec.clone();
-        interpolation.interpolate(&mut many_result).unwrap();
+        let mut many_result = vec![0.0; test_xs_vec.len()];
+        interpolation
+            .interpolate(&test_xs_vec, &mut many_result)
+            .unwrap();
 
         for (idx, x) in test_xs_vec.iter().enumerate() {
             let answer = test_func(*x);
@@ -1147,7 +1226,7 @@ mod tests {
 
         for &(name, test_func, answer) in tests.iter() {
             let ys_vec = Vec::from_iter(xs_vec.iter().cloned().map(test_func));
-            let result = integrator.integrate(&ys_vec);
+            let result = integrator.integrate(&ys_vec, 1e-6);
             let difference = result - answer;
             let difference_fraction = difference / answer;
 
@@ -1174,8 +1253,10 @@ mod tests {
 
         let interpolation = integrator.interpolation(&ys_vec);
 
-        let mut many_result = test_xs_vec.clone();
-        interpolation.eval_many(&mut many_result);
+        let mut many_result = vec![0.0; test_xs_vec.len()];
+        interpolation
+            .interpolate(&test_xs_vec, &mut many_result)
+            .unwrap();
 
         for (idx, x) in test_xs_vec.iter().enumerate() {
             let answer = test_func(*x);
@@ -1252,7 +1333,7 @@ mod tests {
 
         for &(name, test_func, answer) in tests.iter() {
             let ys_vec = Vec::from_iter(xs_vec.iter().cloned().map(test_func));
-            let result = integrator.integrate(&ys_vec);
+            let result = integrator.integrate(&ys_vec, 1e-6);
             let difference = result - answer;
             let difference_fraction = difference / answer;
 

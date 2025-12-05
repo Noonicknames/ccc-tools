@@ -20,6 +20,8 @@ pub mod util;
 pub mod calc;
 pub mod new;
 
+pub mod bench;
+
 /// Calculates rates vs temperature from two-column (projectile energy, cross-section) data files.
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]

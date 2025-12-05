@@ -32,12 +32,12 @@
     ],
     temperatures: [
         // Sequence(start: 11604.525, end: 116045.25, n: 10),
-        Sequence(start: 1.0, end: 10.0, n: 1)
+        Sequence(start: 1.0, end: 10.0, n: 10)
     ],
     // temperature_units: Kelvin,
     temperature_units: ElectronVolt,
     output_folder: "./calc-rates-out",
-    output_integrands: true,
+    output_integrands: false,
     // collision_rate_units: Atomic,
     collision_rate_units: CentimetreCubedPerSecond,
 )
