@@ -26,7 +26,7 @@ impl From<std::io::Error> for NewCmdError {
 pub async fn cmd_new(
     path: &str,
     force: bool,
-    diagnostics: &Arc<AsyncDiagnostics>,
+    _diagnostics: &Arc<AsyncDiagnostics>,
 ) -> Result<(), NewCmdError> {
     let mut file = 'file: {
         let mut open_options = tokio::fs::OpenOptions::new();

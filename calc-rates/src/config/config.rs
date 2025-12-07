@@ -14,6 +14,8 @@ use crate::{
 };
 
 /// User facing struct which is directly serialized and deserialized.
+///
+/// This is the user facing variant of [Config].
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ConfigSerde {
     /// Result sets for which to calculate rates for.
@@ -25,12 +27,12 @@ pub struct ConfigSerde {
     /// Default behaviour for outputting integrands if unspecified in a result set.
     #[serde(default)]
     pub output_integrands: bool,
-    /// Default energy unit to assume a file is in.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub energy_units: Option<EnergyUnitsOrAuto>,
-    /// Default cross section unit to assume a file is in.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cs_units: Option<CsUnitsOrAuto>,
+    // /// Default energy unit to assume a file is in.
+    // #[serde(default, skip_serializing_if = "Option::is_none")]
+    // pub energy_units: Option<EnergyUnitsOrAuto>,
+    // /// Default cross section unit to assume a file is in.
+    // #[serde(default, skip_serializing_if = "Option::is_none")]
+    // pub cs_units: Option<CsUnitsOrAuto>,
     /// Folder to write results to.
     #[serde(default = "default_output_folder")]
     pub output_folder: String,
@@ -44,7 +46,7 @@ fn default_output_folder() -> String {
 
 /// Provides configuration data for calculating one set of (temperature, rate) results.
 ///
-/// This is the user facing variant of this struct, see [ResultSet].
+/// This is the user facing variant of [ResultSet].
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ResultSetSerde {
     pub name: String,
@@ -70,6 +72,7 @@ impl ResultSetSerde {
 }
 
 impl ConfigSerde {
+    /// Template which is created when calling the `new` command.
     pub fn template() -> Self {
         Self {
             result_sets: vec![
@@ -97,13 +100,16 @@ impl ConfigSerde {
             output_integrands: false,
             temperatures: vec![TemperatureGridPoints::Direct(vec![1.0, 2.0, 3.0, 4.0, 5.0])],
             temperature_units: TemperatureUnits::ElectronVolt,
-            energy_units: None,
-            cs_units: None,
+            // energy_units: None,
+            // cs_units: None,
             output_folder: default_output_folder(),
             collision_rate_units: CollisionRateUnits::Atomic,
         }
     }
 
+    /// Convert to [Config] which is more convenient for processing.
+    ///
+    /// Note that currently there is no backwards conversion.
     pub fn to_config(self) -> Config {
         Config {
             result_sets: self
@@ -113,8 +119,8 @@ impl ConfigSerde {
                 .collect(),
             temperatures: TemperatureGridPoints::to_points_slice(&self.temperatures),
             temperature_units: self.temperature_units,
-            energy_units: self.energy_units.unwrap_or(EnergyUnitsOrAuto::Auto),
-            cs_units: self.cs_units.unwrap_or(CsUnitsOrAuto::Auto),
+            // energy_units: self.energy_units.unwrap_or(EnergyUnitsOrAuto::Auto),
+            // cs_units: self.cs_units.unwrap_or(CsUnitsOrAuto::Auto),
             output_folder: PathBuf::from(self.output_folder),
             collision_rate_units: self.collision_rate_units,
         }
@@ -122,7 +128,9 @@ impl ConfigSerde {
 }
 
 /// Integration grid points.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+///
+/// Directly serialized/deserialized in the configuration file.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum IntegrationGridPoints {
     MonotoneCubic(RangeOrCountSerde<usize>),
     NaturalCubic(RangeOrCountSerde<usize>),
@@ -133,6 +141,9 @@ pub enum IntegrationGridPoints {
 }
 
 impl IntegrationGridPoints {
+    /// The kind of integration as [IntegrationKind].
+    ///
+    /// If this is [IntegrationGridPoints::Repeat] this will return the kind of the inner integration grid points.
     pub fn kind(&self) -> IntegrationKind {
         match self {
             Self::MonotoneCubic(..) => IntegrationKind::MonotoneCubic,
@@ -143,6 +154,7 @@ impl IntegrationGridPoints {
         }
     }
 
+    /// Number of repeats of the inner most integration grid points.
     pub fn repeats(&self) -> usize {
         match self {
             Self::Repeat(inner, n) => *n as usize * inner.repeats(),
@@ -150,6 +162,7 @@ impl IntegrationGridPoints {
         }
     }
 
+    /// Returns the number of repeats and the underlying integration grid points as a tuple.
     pub fn repeats_inner(&self) -> (usize, &Self) {
         match self {
             Self::Repeat(inner, n) => {
@@ -190,6 +203,25 @@ impl IntegrationGridPoints {
         }
     }
 
+    /// Return an iterator which flattens [IntegrationGridPoints::Repeat].
+    ///
+    /// # Example
+    /// ```
+    /// use calc_rates::config::IntegrationGridPoints;
+    /// let grid_points = vec![
+    ///     IntegrationGridPoints::Repeat(Box::new(
+    ///         IntegrationGridPoints::MonotoneCubic("10".parse().unwrap())
+    ///     ), 2),
+    ///     IntegrationGridPoints::NaturalCubic("30".parse().unwrap()),
+    /// ];
+    /// 
+    /// let mut iter = IntegrationGridPoints::flat_iter(&grid_points);
+    /// 
+    /// assert_eq!(iter.next(), Some(&IntegrationGridPoints::MonotoneCubic("10".parse().unwrap())));
+    /// assert_eq!(iter.next(), Some(&IntegrationGridPoints::MonotoneCubic("10".parse().unwrap())));
+    /// assert_eq!(iter.next(), Some(&IntegrationGridPoints::NaturalCubic("30".parse().unwrap())));
+    /// assert_eq!(iter.next(), None);
+    /// ```
     pub fn flat_iter(slice: &[Self]) -> impl Iterator<Item = &Self> {
         slice.iter().flat_map(|grid_pts| {
             let (n, grid_pts) = grid_pts.repeats_inner();
@@ -198,14 +230,16 @@ impl IntegrationGridPoints {
     }
 }
 
-/// [ConfigSerde] but with some user conveniences removed.
+/// Configuration for calculating rates.
+/// 
+/// This is not directly serialised/deserialised, see [ConfigSerde].
 #[derive(Debug, Default)]
 pub struct Config {
     pub result_sets: Vec<ResultSet>,
     pub temperatures: Vec<f64>,
     pub temperature_units: TemperatureUnits,
-    pub energy_units: EnergyUnitsOrAuto,
-    pub cs_units: CsUnitsOrAuto,
+    // pub energy_units: EnergyUnitsOrAuto,
+    // pub cs_units: CsUnitsOrAuto,
     pub output_folder: PathBuf,
     pub collision_rate_units: CollisionRateUnits,
 }
@@ -229,6 +263,9 @@ pub enum TemperatureGridPoints {
 }
 
 impl TemperatureGridPoints {
+    /// Convert from a slice of [TemperatureGridPoints] to a flat [Vec] of floating point numbers.
+    /// 
+    /// This is implemented in terms of [TemperatureGridPoints::write_points].
     pub fn to_points_slice(slice: &[Self]) -> Vec<f64> {
         let mut points = Vec::new();
 
@@ -266,6 +303,7 @@ impl TemperatureGridPoints {
     }
 }
 
+/// Convert a slice of [IntegrationGridPoints] and given the number of points into a [Vec<(IntegrationKind, Range<usize>)>] denoting the kind of integration to apply to each range of points. 
 pub fn integration_grid_to_points(
     grid: &[IntegrationGridPoints],
     points_count: usize,
@@ -282,32 +320,6 @@ pub fn integration_grid_to_points(
         result.push((kind, range));
         if ptr == points_count - 1 {
             break;
-        }
-    }
-
-    result
-}
-
-pub fn flatten_integration_grid(
-    grid: &mut Vec<IntegrationGridPoints>,
-) -> Vec<IntegrationGridPoints> {
-    let mut result = Vec::new();
-
-    for grid_pts in grid.iter() {
-        match grid_pts {
-            IntegrationGridPoints::Repeat(grid_pts, n) => {
-                let mut grid_pts = grid_pts.as_ref().clone();
-                let mut n = *n;
-                while let IntegrationGridPoints::Repeat(grid_pts_inner, n_inner) = &grid_pts {
-                    n = *n_inner;
-                    grid_pts = grid_pts_inner.as_ref().clone();
-                }
-
-                for _ in 0..n {
-                    result.push(grid_pts.clone());
-                }
-            }
-            grid => result.push(grid.clone()),
         }
     }
 

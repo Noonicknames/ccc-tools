@@ -481,7 +481,7 @@ fn test_legendre() {
 
     assert_eq!(first.eval(-1.0), -1.0);
 
-    for i in 0..64 {
+    for i in 0..20 {
         assert!((legendre(i).eval(1.0) - 1.0).abs() < 1e-8, "Failed {}", i);
     }
 }

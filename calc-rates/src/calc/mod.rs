@@ -117,8 +117,6 @@ pub async fn cmd_calc(
         result_sets,
         temperatures,
         temperature_units,
-        energy_units,
-        cs_units,
         output_folder,
         collision_rate_units,
     } = get_config(path).await?;
@@ -392,7 +390,7 @@ async fn output_integrands_data(
                 integrator.interpolation_mapped(energy_vec.as_slice(), &cs_vec, move |x, y| {
                     x.iter()
                         .zip(y.iter_mut())
-                        .map(|(&x, y)| *y = *y * x * (-x * recip_temp).exp());
+                        .for_each(|(&x, y)| *y = *y * x * (-x * recip_temp).exp());
                 });
 
             let mut ys_buf = vec![0.0; dense_x_grid.len()];
