@@ -22,7 +22,7 @@ pub struct ConfigSerde {
     pub result_sets: Vec<ResultSetSerde>,
     /// Temperatures to calculate collision rates for.
     pub temperatures: Vec<TemperatureGridPoints>,
-    /// Units for temperatures in `temperatures` field.
+    /// Units for temperatures in the `temperatures` field.
     pub temperature_units: TemperatureUnits,
     /// Default behaviour for outputting integrands if unspecified in a result set.
     #[serde(default)]
@@ -49,7 +49,9 @@ fn default_output_folder() -> String {
 /// This is the user facing variant of [ResultSet].
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ResultSetSerde {
+    /// Name of result set, results will be outputted to `<output_folder>/<name>`
     pub name: String,
+    /// Path to the data file which holds two column
     pub source: String,
     pub grid: Vec<IntegrationGridPoints>,
     pub energy_units: EnergyUnitsOrAuto,

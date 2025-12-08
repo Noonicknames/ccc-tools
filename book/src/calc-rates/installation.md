@@ -1,7 +1,7 @@
 # Installation
 
 Currently, `calc-rates` can only be built from source directly or via `cargo install`.
-To build, ensure Rust 1.85 or above is installed.
+Before building, ensure Rust 1.85 or above is installed.
 To install Rust, follow instructions [here](https://rust-lang.org/tools/install/).
 
 > [!TIP]
@@ -9,7 +9,7 @@ To install Rust, follow instructions [here](https://rust-lang.org/tools/install/
 
 ## Dependencies
 
-Whilst not required for building, `calc-rates` dynamically links to OpenBLAS and LAPACKE or IntelMKL so ensure either are installed on your system and available in the PATH variable.
+Whilst not required for building, `calc-rates` dynamically links to OpenBLAS and LAPACKE or IntelMKL so ensure either are installed on your system and available in the `PATH` variable.
 The paths which calc-rates searches for these libraries is platform specific.
 For more details on how these libraries are linked see [la](https://github.com/Noonicknames/la).
 
@@ -23,7 +23,7 @@ Ensure this is in your `$PATH` variable, and set `${CARGO_HOME}` to a different 
 
 To install, run the following commands,
 
-```
+```bash
 cargo install --git https://github.com/Noonicknames/ccc-tools --package calc-rates
 ```
 
@@ -31,14 +31,14 @@ cargo install --git https://github.com/Noonicknames/ccc-tools --package calc-rat
 
 To directly build, run the following commands,
 
-```
+```bash
 git clone https://github.com/Noonicknames/ccc-tools
 cd ccc-tools
 cargo build --release --package calc-rates
 ```
 
-After finishing building, the standalone binary is located at `./target/release/ccc-tools` or `./target/release/ccc-tools.exe` on windows.
-This can be copied to a different folder e.g. `~/bin/`
+After finishing building, the standalone binary is located at `./target/release/calc-rates` or `./target/release/calc-rates.exe` on windows.
+This can be copied to a different folder e.g. `~/bin/` with `cp ./target/release/calc-rates ~/bin/`.
 
 ## From Pre-compiled Binary
 

@@ -110,19 +110,29 @@ impl CalcCmdError {
 }
 
 pub async fn cmd_calc(
-    path: impl AsRef<Path>,
+    config_path: impl AsRef<Path>,
     diagnostics: &Arc<AsyncDiagnostics>,
 ) -> Result<(), CalcCmdError> {
+    let config_path = if config_path.as_ref().is_dir() {
+        config_path.as_ref().join("calc-rates.ron")
+    } else {
+        config_path.as_ref().to_path_buf()
+    };
     let Config {
         result_sets,
         temperatures,
         temperature_units,
         output_folder,
         collision_rate_units,
-    } = get_config(path).await?;
+    } = get_config(config_path.as_path()).await?;
+
+    if let Some(config_root) = config_path.as_path().parent() {
+        println!("config_root: {}", config_root.display());
+        std::env::set_current_dir(config_root).unwrap();
+    }
 
     let temperatures = Arc::new(temperatures);
-    let output_folder = Arc::new(PathBuf::from(output_folder));
+    let output_folder = Arc::new(output_folder);
 
     if let Err(err) = ensure_folder_exists(output_folder.as_ref()).await {
         return Err(CalcCmdError::CreateResultFolder {
@@ -499,7 +509,7 @@ async fn get_energy_cs(
 
             let units = line.and_then(|line| {
                 line.split_whitespace()
-                    .find_map(|word| CsUnits::from_str(word.trim_matches(',')))
+                    .find_map(|word| CsUnits::from_str(word.trim_matches(',').trim_matches(';')))
             });
 
             match units {
@@ -653,46 +663,46 @@ async fn get_energy_cs(
 }
 
 async fn get_config(file_path: impl AsRef<Path>) -> Result<Config, CalcCmdError> {
-    {
-        let mut open_options = tokio::fs::OpenOptions::new();
-        open_options.read(true);
+    let file_path = file_path.as_ref();
+    let mut open_options = tokio::fs::OpenOptions::new();
+    open_options.read(true);
 
-        let mut file = open_options.open(file_path.as_ref()).await.map_err(|err| {
-            CalcCmdError::OpenConfig {
-                file_path: file_path.as_ref().display().to_string(),
-                err,
-            }
+    let mut file = open_options
+        .open(file_path)
+        .await
+        .map_err(|err| CalcCmdError::OpenConfig {
+            file_path: file_path.display().to_string(),
+            err,
         })?;
 
-        let mut buf = String::new();
-        file.read_to_string(&mut buf)
-            .await
-            .map_err(|err| CalcCmdError::ConfigInvalidUtf8 {
-                file_path: file_path.as_ref().display().to_string(),
-                err,
-            })?;
+    let mut buf = String::new();
+    file.read_to_string(&mut buf)
+        .await
+        .map_err(|err| CalcCmdError::ConfigInvalidUtf8 {
+            file_path: file_path.display().to_string(),
+            err,
+        })?;
 
-        Ok(ron::from_str::<ConfigSerde>(&buf)
-            .map(ConfigSerde::to_config)
-            .map_err(|err| {
-                let mut buf_lines = buf.lines();
-                let start_line = err.span.start.line.checked_sub(3).unwrap_or(0) + 1;
-                for _ in 0..start_line - 1 {
-                    buf_lines.next();
+    Ok(ron::from_str::<ConfigSerde>(&buf)
+        .map(ConfigSerde::to_config)
+        .map_err(|err| {
+            let mut buf_lines = buf.lines();
+            let start_line = err.span.start.line.checked_sub(3).unwrap_or(0) + 1;
+            for _ in 0..start_line - 1 {
+                buf_lines.next();
+            }
+            let mut lines = String::new();
+            for _ in start_line..=err.span.end.line + 2 {
+                if let Some(line) = buf_lines.next() {
+                    lines.push_str(line);
+                    lines.push('\n');
                 }
-                let mut lines = String::new();
-                for _ in start_line..=err.span.end.line + 2 {
-                    if let Some(line) = buf_lines.next() {
-                        lines.push_str(line);
-                        lines.push('\n');
-                    }
-                }
-                CalcCmdError::ConfigParse {
-                    file_path: file_path.as_ref().display().to_string(),
-                    start_line: start_line,
-                    lines,
-                    err,
-                }
-            })?)
-    }
+            }
+            CalcCmdError::ConfigParse {
+                file_path: file_path.display().to_string(),
+                start_line: start_line,
+                lines,
+                err,
+            }
+        })?)
 }
