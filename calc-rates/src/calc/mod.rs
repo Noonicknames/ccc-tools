@@ -18,6 +18,7 @@ use futures::stream::FuturesUnordered;
 use la::{BlasLib, LapackeLib};
 use ordered_float::OrderedFloat;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use regex::Regex;
 use tokio::{
     fs::OpenOptions,
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
@@ -126,7 +127,11 @@ pub async fn cmd_calc(
         collision_rate_units,
     } = get_config(config_path.as_path()).await?;
 
-    if let Some(config_root) = config_path.as_path().parent() {
+    if let Some(config_root) = config_path
+        .as_path()
+        .parent()
+        .filter(|config_root| config_root.as_os_str().len() > 0)
+    {
         println!("config_root: {}", config_root.display());
         std::env::set_current_dir(config_root).unwrap();
     }
@@ -473,6 +478,8 @@ async fn get_energy_cs(
     let file = OpenOptions::new().read(true).open(source.as_ref()).await?;
     let mut file = LinesStream::new(BufReader::new(file).lines()).peekable();
 
+    let regexes = [Regex::new(r#"\((.*)\)"#).unwrap()];
+
     let energy_units = match energy_units {
         EnergyUnitsOrAuto::Auto => {
             let line = match file.peek().await {
@@ -481,8 +488,23 @@ async fn get_energy_cs(
             };
 
             let units = line.and_then(|line| {
-                line.split_whitespace()
-                    .find_map(|word| EnergyUnits::from_str(word.trim_matches(',')))
+                line.split_whitespace().find_map(|word| {
+                    if let Some(units) =
+                        EnergyUnits::from_str(word.trim_matches(',').trim_matches(';'))
+                    {
+                        return Some(units);
+                    }
+                    for regex in regexes.iter() {
+                        for substr in regex.find_iter(word) {
+                            if let Some(units) = EnergyUnits::from_str(
+                                substr.as_str().trim_matches(',').trim_matches(';'),
+                            ) {
+                                return Some(units);
+                            }
+                        }
+                    }
+                    None
+                })
             });
 
             match units {
@@ -527,6 +549,13 @@ async fn get_energy_cs(
         _ => cs_units.non_auto(),
     };
 
+    diagnostics.write_log_background(info!(
+        "Parsing `{}` with units {:?}, {:?}",
+        source.as_ref().display(),
+        energy_units,
+        cs_units
+    ));
+
     let mut energy_cs = BTreeMap::new();
 
     let mut line_count = 0;
@@ -551,7 +580,7 @@ async fn get_energy_cs(
 
         let mut cols = line.split_whitespace();
 
-        let energy = cols.next().unwrap(); // Should be guaranteed by the check above.
+        let energy = cols.next().unwrap().trim_matches(',').trim_matches(';'); // Should be guaranteed by the check above.
 
         let energy = match energy.parse::<f64>() {
             Ok(energy) => energy,
@@ -583,7 +612,7 @@ async fn get_energy_cs(
         };
 
         let cs = match cols.next() {
-            Some(cs) => cs,
+            Some(cs) => cs.trim_matches(',').trim_matches(';'),
             None => {
                 let snippet = Snippet::empty(Some(source.as_ref().display().to_string()))
                     .with_chunk(

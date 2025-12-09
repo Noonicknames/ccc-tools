@@ -12,7 +12,7 @@ readme = "README.md"
 
 [workspace.dependencies]
 nalgebra = { version = "0.32" }
-la = { git = "https://github.com/Noonicknames/la.git" }
+la = { git = "https://github.com/Noonicknames/la.git", default-features = false }
 rustnomial = { version = "0.3" }
 special = { version = "0.11" }
 ordered-float = { version = "5.1" }
@@ -30,6 +30,7 @@ unicode-width = { version = "0.2" }
 
 serde = { version = "1.0", default-features = false }
 ron = { version = "0.12" }
+regex = { version = "1.12", default-features = false }
 
 tokio = { version = "1.48" }
 tokio-stream = { version = "0.1" }

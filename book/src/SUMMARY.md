@@ -8,3 +8,5 @@
         - [The Configuration File](./calc-rates/usage/the_configuration_file.md)
         - [Input Data](./calc-rates/usage/input_data.md)
         - [Checking Integrands](./calc-rates/usage/checking_integrands.md)
+        - [Logging System](./calc-rates/usage/logging_system.md)
+        - [Integration Grid](./calc-rates/usage/integration_grid.md)

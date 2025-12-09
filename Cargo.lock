@@ -105,6 +105,7 @@ dependencies = [
  "nalgebra",
  "ordered-float",
  "rayon",
+ "regex",
  "ron",
  "rustnomial",
  "serde",
@@ -339,7 +340,7 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 [[package]]
 name = "la"
 version = "0.1.0"
-source = "git+https://github.com/Noonicknames/la.git#24682d5a71a7f63918486726788a7c2b1b09b5b8"
+source = "git+https://github.com/Noonicknames/la.git#d2b18753ee88e78d15a2d3ec10e2534ae5c23c54"
 dependencies = [
  "cblas-sys",
  "cfg-if",
@@ -352,9 +353,9 @@ dependencies = [
 
 [[package]]
 name = "lambert_w"
-version = "1.2.31"
+version = "1.2.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c567f2087fc83535a312e683b6ed8811395690ef896df7b82966b21b7526580"
+checksum = "9bf449fa972fa5f9c412c4697dc472bfbf84edbaaeb078d8e42f5889fee41cde"
 dependencies = [
  "num-complex",
  "num-traits",
@@ -589,6 +590,31 @@ dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
 ]
+
+[[package]]
+name = "regex"
+version = "1.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "843bc0191f75f3e22651ae5f1e72939ab2f72a4bc30fa80a066bd66edefc24d4"
+dependencies = [
+ "regex-automata",
+ "regex-syntax",
+]
+
+[[package]]
+name = "regex-automata"
+version = "0.4.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5276caf25ac86c8d810222b3dbb938e512c55c6831a10f3e6ed1c93b84041f1c"
+dependencies = [
+ "regex-syntax",
+]
+
+[[package]]
+name = "regex-syntax"
+version = "0.8.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "ron"
