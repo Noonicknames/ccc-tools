@@ -7,7 +7,33 @@ use std::{
 
 use serde::{Deserialize, Serialize, de::Visitor};
 
-#[derive(Clone, Debug, Serialize)]
+/// A range or a count which is directly serialised/deserialised.
+///
+/// Due to constraints of serde, ranges are serialised as strings like `"1..3"` or `"1..=2"` with quotation marks whilst counts are serialised as integers.
+/// 
+/// # Supported Variants
+/// - Exclusive ranges, excludes the end, e.g. "0..3"
+/// - Inclusive ranges, includes the end, e.g. "0..=2"
+/// - Unbounded or full ranges, includes all, ".."
+/// - Unbounded on one side, e.g. "0.." or "..10"
+///
+/// # Example
+/// ```
+/// use calc_rates::config::{RangeOrCountSerde, RangeSerde};
+///
+/// let range = RangeOrCountSerde::Range(RangeSerde::Range {
+///     start: 1,
+///     end: 3,
+/// });
+/// let count = RangeOrCountSerde::Count(3);
+/// let range_ser = ron::ser::to_string(&range).unwrap();
+/// let count_ser = ron::ser::to_string(&count).unwrap();
+///
+/// // Note quotation marks around the range.
+/// assert_eq!(range_ser, "\"1..3\"");
+/// assert_eq!(count_ser, "3");
+/// ```
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub enum RangeOrCountSerde<T> {
     #[serde(untagged)]
     Count(T),
@@ -97,6 +123,30 @@ where
     }
 }
 
+/// A range which is directly serialized/deserialized.
+///
+/// This implements [std::ops::RangeBounds].
+/// Due to limitations of serde, these are serialized as strings such as `"1..3"` or `1..=2`.
+///
+/// # Example
+/// ```
+/// use calc_rates::config::RangeSerde;
+///
+/// let range = RangeSerde::Range {
+///     start: 1,
+///     end: 3,
+/// };
+/// let range_inclusive = RangeSerde::RangeInclusive {
+///     start: 1,
+///     end: 2,
+/// };
+/// let range_ser = ron::ser::to_string(&range).unwrap();
+/// let range_inclusive_ser = ron::ser::to_string(&range_inclusive).unwrap();
+///
+/// // Note quotation marks around the range.
+/// assert_eq!(range_ser, "\"1..3\"");
+/// assert_eq!(range_inclusive_ser, "\"1..=2\"");
+/// ```
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum RangeSerde<T> {
     RangeInclusive { start: T, end: T },
