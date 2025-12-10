@@ -27,7 +27,6 @@ use tokio_stream::{StreamExt, wrappers::LinesStream};
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
-    bench_time,
     config::{
         CollisionRateUnits, Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits,
         EnergyUnitsOrAuto, ResultSet, TemperatureUnits, integration_grid_to_points,
@@ -132,7 +131,6 @@ pub async fn cmd_calc(
         .parent()
         .filter(|config_root| config_root.as_os_str().len() > 0)
     {
-        println!("config_root: {}", config_root.display());
         std::env::set_current_dir(config_root).unwrap();
     }
 
@@ -301,36 +299,32 @@ async fn output_rates_data(
     let rate_conversion =
         CollisionRateUnits::conversion_factor(CollisionRateUnits::Atomic, rate_units);
 
-    let rate_vec;
+    let rate_vec = temperatures
+        .par_iter()
+        .map(|temperature| {
+            let recip_temp = 1.0 / (temperature * temp_conversion);
+            // Integrand according to Joel
+            // Atomic units kB = 1, T is converted to Hartree, energy in hartree
+            // x is energy, y is cross section
+            let map = move |x: &[f64], y: &mut [f64]| {
+                x.iter()
+                    .zip(y.iter_mut())
+                    .for_each(|(&x, y)| *y = *y * x * (-x * recip_temp).exp());
+            };
 
-    bench_time!(format!("Integration `{}`", name), {
-        rate_vec = temperatures
-            .par_iter()
-            .map(|temperature| {
-                let recip_temp = 1.0 / (temperature * temp_conversion);
-                // Integrand according to Joel
-                // Atomic units kB = 1, T is converted to Hartree, energy in hartree
-                // x is energy, y is cross section
-                let map = move |x: &[f64], y: &mut [f64]| {
-                    x.iter()
-                        .zip(y.iter_mut())
-                        .for_each(|(&x, y)| *y = *y * x * (-x * recip_temp).exp());
-                };
+            let mut result = integrator.integrate_mapped(&cs_vec, &map, 1e-6);
 
-                let mut result = integrator.integrate_mapped(&cs_vec, &map, 1e-6);
+            // Factor in front
+            result = result
+                * std::f64::consts::PI.sqrt().recip()
+                * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
 
-                // Factor in front
-                result = result
-                    * std::f64::consts::PI.sqrt().recip()
-                    * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
+            // Convert to desired units
+            result = result * rate_conversion;
 
-                // Convert to desired units
-                result = result * rate_conversion;
-
-                result
-            })
-            .collect::<Vec<_>>();
-    });
+            result
+        })
+        .collect::<Vec<_>>();
 
     // Output results
     let mut data = Vec::new();

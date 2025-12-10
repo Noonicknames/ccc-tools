@@ -63,6 +63,12 @@ To disable dynamic linking, add the following flag,
 ```
 --no-default-features
 ```
+
+An example full install command is,
+
+```
+cargo install --git https://github.com/Noonicknames/ccc-tools --package calc-rates --no-default-features --features static-intelmkl
+```
 > [!NOTE]
 > If the installation path of OpenBLAS or IntelMKL differs from above, include the correct paths in `LD_LIBRARY_PATH` on linux, `DYLD_FALLBACK_LIBRARY_PATH` on macOS or `PATH` on windows.
 > OpenBLAS is often installed such that only dynamic linking is possible.
