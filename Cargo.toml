@@ -1,5 +1,5 @@
 [workspace]
-members = ["calc-rates", "extract-cs", "tester"]
+members = ["calc-rates", "cs-extract", "tester"]
 resolver = "2"
 
 [workspace.package]

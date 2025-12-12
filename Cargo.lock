@@ -218,6 +218,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
+name = "cs-extract"
+version = "0.1.2"
+dependencies = [
+ "arrayvec",
+ "clap",
+ "colored 3.0.0",
+ "diagnostics",
+ "futures",
+ "ron",
+ "serde",
+ "state-parse",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "unicode-width",
+]
+
+[[package]]
 name = "diagnostics"
 version = "0.1.0"
 source = "git+https://github.com/Noonicknames/diagnostics.git#a2a7c84d76db3ae1ba6cee0fb17aa8ce176c18a7"
@@ -234,24 +252,6 @@ name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
-
-[[package]]
-name = "extract-cs"
-version = "0.1.2"
-dependencies = [
- "arrayvec",
- "clap",
- "colored 3.0.0",
- "diagnostics",
- "futures",
- "ron",
- "serde",
- "state-parse",
- "thiserror",
- "tokio",
- "tokio-stream",
- "unicode-width",
-]
 
 [[package]]
 name = "futures"

@@ -33,16 +33,16 @@ pub enum Commands {
     /// Prepare results according to a config file.
     Extract {
         /// Path to read in configuration.
-        #[arg(short, long, default_value = "extract-cs.ron")]
+        #[arg(short, long, default_value = "cs-extract.ron")]
         path: String,
     },
     /// Writes an example prep-plot file.
     ///
-    /// By default writes to './extract-cs.ron'.
+    /// By default writes to './cs-extract.ron'.
     /// The file or directory may be specified with --path.
     New {
         /// Path to write template config file to.
-        #[arg(long, default_value = "extract-cs.ron")]
+        #[arg(long, default_value = "cs-extract.ron")]
         path: String,
         /// Get an example for extracting total waves.
         #[arg(long)]

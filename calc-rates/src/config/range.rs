@@ -126,7 +126,7 @@ where
 /// A range which is directly serialized/deserialized.
 ///
 /// This implements [std::ops::RangeBounds].
-/// Due to limitations of serde, these are serialized as strings such as `"1..3"` or `1..=2`.
+/// Due to limitations of serde, these are serialized as strings such as `"1..3"` or `"1..=2"`.
 ///
 /// # Example
 /// ```

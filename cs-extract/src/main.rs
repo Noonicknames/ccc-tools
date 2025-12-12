@@ -1,6 +1,6 @@
 use std::process::ExitCode;
 fn main() -> ExitCode {
-    match extract_cs::run() {
+    match cs_extract::run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(_err) => ExitCode::FAILURE,
     }
