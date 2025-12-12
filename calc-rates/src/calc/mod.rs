@@ -18,6 +18,7 @@ use futures::stream::FuturesUnordered;
 use la::{BlasLib, LapackeLib};
 use ordered_float::OrderedFloat;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use regex::Regex;
 use tokio::{
     fs::OpenOptions,
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
@@ -26,7 +27,6 @@ use tokio_stream::{StreamExt, wrappers::LinesStream};
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
-    bench_time,
     config::{
         CollisionRateUnits, Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits,
         EnergyUnitsOrAuto, ResultSet, TemperatureUnits, integration_grid_to_points,
@@ -126,8 +126,11 @@ pub async fn cmd_calc(
         collision_rate_units,
     } = get_config(config_path.as_path()).await?;
 
-    if let Some(config_root) = config_path.as_path().parent() {
-        println!("config_root: {}", config_root.display());
+    if let Some(config_root) = config_path
+        .as_path()
+        .parent()
+        .filter(|config_root| config_root.as_os_str().len() > 0)
+    {
         std::env::set_current_dir(config_root).unwrap();
     }
 
@@ -296,36 +299,32 @@ async fn output_rates_data(
     let rate_conversion =
         CollisionRateUnits::conversion_factor(CollisionRateUnits::Atomic, rate_units);
 
-    let rate_vec;
+    let rate_vec = temperatures
+        .par_iter()
+        .map(|temperature| {
+            let recip_temp = 1.0 / (temperature * temp_conversion);
+            // Integrand according to Joel
+            // Atomic units kB = 1, T is converted to Hartree, energy in hartree
+            // x is energy, y is cross section
+            let map = move |x: &[f64], y: &mut [f64]| {
+                x.iter()
+                    .zip(y.iter_mut())
+                    .for_each(|(&x, y)| *y = *y * x * (-x * recip_temp).exp());
+            };
 
-    bench_time!(format!("Integration `{}`", name), {
-        rate_vec = temperatures
-            .par_iter()
-            .map(|temperature| {
-                let recip_temp = 1.0 / (temperature * temp_conversion);
-                // Integrand according to Joel
-                // Atomic units kB = 1, T is converted to Hartree, energy in hartree
-                // x is energy, y is cross section
-                let map = move |x: &[f64], y: &mut [f64]| {
-                    x.iter()
-                        .zip(y.iter_mut())
-                        .for_each(|(&x, y)| *y = *y * x * (-x * recip_temp).exp());
-                };
+            let mut result = integrator.integrate_mapped(&cs_vec, &map, 1e-6);
 
-                let mut result = integrator.integrate_mapped(&cs_vec, &map, 1e-6);
+            // Factor in front
+            result = result
+                * std::f64::consts::PI.sqrt().recip()
+                * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
 
-                // Factor in front
-                result = result
-                    * std::f64::consts::PI.sqrt().recip()
-                    * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
+            // Convert to desired units
+            result = result * rate_conversion;
 
-                // Convert to desired units
-                result = result * rate_conversion;
-
-                result
-            })
-            .collect::<Vec<_>>();
-    });
+            result
+        })
+        .collect::<Vec<_>>();
 
     // Output results
     let mut data = Vec::new();
@@ -473,6 +472,8 @@ async fn get_energy_cs(
     let file = OpenOptions::new().read(true).open(source.as_ref()).await?;
     let mut file = LinesStream::new(BufReader::new(file).lines()).peekable();
 
+    let regexes = [Regex::new(r#"\((.*)\)"#).unwrap()];
+
     let energy_units = match energy_units {
         EnergyUnitsOrAuto::Auto => {
             let line = match file.peek().await {
@@ -481,8 +482,23 @@ async fn get_energy_cs(
             };
 
             let units = line.and_then(|line| {
-                line.split_whitespace()
-                    .find_map(|word| EnergyUnits::from_str(word.trim_matches(',')))
+                line.split_whitespace().find_map(|word| {
+                    if let Some(units) =
+                        EnergyUnits::from_str(word.trim_matches(',').trim_matches(';'))
+                    {
+                        return Some(units);
+                    }
+                    for regex in regexes.iter() {
+                        for substr in regex.find_iter(word) {
+                            if let Some(units) = EnergyUnits::from_str(
+                                substr.as_str().trim_matches(',').trim_matches(';'),
+                            ) {
+                                return Some(units);
+                            }
+                        }
+                    }
+                    None
+                })
             });
 
             match units {
@@ -527,6 +543,13 @@ async fn get_energy_cs(
         _ => cs_units.non_auto(),
     };
 
+    diagnostics.write_log_background(info!(
+        "Parsing `{}` with units {:?}, {:?}",
+        source.as_ref().display(),
+        energy_units,
+        cs_units
+    ));
+
     let mut energy_cs = BTreeMap::new();
 
     let mut line_count = 0;
@@ -551,7 +574,7 @@ async fn get_energy_cs(
 
         let mut cols = line.split_whitespace();
 
-        let energy = cols.next().unwrap(); // Should be guaranteed by the check above.
+        let energy = cols.next().unwrap().trim_matches(',').trim_matches(';'); // Should be guaranteed by the check above.
 
         let energy = match energy.parse::<f64>() {
             Ok(energy) => energy,
@@ -583,7 +606,7 @@ async fn get_energy_cs(
         };
 
         let cs = match cols.next() {
-            Some(cs) => cs,
+            Some(cs) => cs.trim_matches(',').trim_matches(';'),
             None => {
                 let snippet = Snippet::empty(Some(source.as_ref().display().to_string()))
                     .with_chunk(

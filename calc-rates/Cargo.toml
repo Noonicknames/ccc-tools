@@ -4,9 +4,19 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 
+[features]
+default = ["dynamic"]
+dynamic = ["la/dynamic"]
+static-intelmkl = ["la/static-intelmkl"]
+static-openblas = ["la/static-openblas"]
+
 [dependencies]
-nalgebra = { workspace = true, features = ["serde", "serde-serialize", "macros"] }
-la.workspace = true
+nalgebra = { workspace = true, features = [
+    "serde",
+    "serde-serialize",
+    "macros",
+] }
+la = { workspace = true }
 rustnomial.workspace = true
 special.workspace = true
 
@@ -21,9 +31,10 @@ tokio = { workspace = true, features = [
     "io-std",
     "io-util",
 ] }
-tokio-stream = { workspace = true, features = ["fs", "io-util"]}
+tokio-stream = { workspace = true, features = ["fs", "io-util"] }
 ron.workspace = true
 unicode-width.workspace = true
 ordered-float.workspace = true
 futures.workspace = true
 rayon.workspace = true
+regex.workspace = true

@@ -305,7 +305,7 @@ impl TemperatureGridPoints {
     }
 }
 
-/// Convert a slice of [IntegrationGridPoints] and given the number of points into a [Vec<(IntegrationKind, Range<usize>)>] denoting the kind of integration to apply to each range of points. 
+/// Convert a slice of [IntegrationGridPoints] and given the number of points into a `Vec<(IntegrationKind, Range<usize>)>` denoting the kind of integration to apply to each range of points. 
 pub fn integration_grid_to_points(
     grid: &[IntegrationGridPoints],
     points_count: usize,

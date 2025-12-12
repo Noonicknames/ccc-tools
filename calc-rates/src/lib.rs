@@ -10,7 +10,9 @@ use diagnostics::{
 use nalgebra::dvector;
 
 use crate::{
-    calc::{CalcCmdError, cmd_calc}, integrate::math, new::{NewCmdError, cmd_new}
+    calc::{CalcCmdError, cmd_calc},
+    integrate::math,
+    new::{NewCmdError, cmd_new},
 };
 
 pub mod config;
@@ -74,9 +76,23 @@ pub async fn async_run() -> Result<(), AppError> {
     // test();
     let Cli { command } = Cli::parse();
 
+    let log_level = std::env::vars()
+        .find_map(|(var, val)| if var == "RUST_LOG" { Some(val) } else { None })
+        .map(|mut level| {
+            level.make_ascii_lowercase();
+            match level.as_str() {
+                "info" => ChannelAllow::all(),
+                "warn" => ChannelAllow::WARN | ChannelAllow::ERROR,
+                "error" => ChannelAllow::ERROR,
+                "none" => ChannelAllow::empty(),
+                _ => ChannelAllow::all(),
+            }
+        })
+        .unwrap_or(ChannelAllow::all());
+
     let diagnostics = {
         let mut diagnostics = AsyncDiagnostics::new(LogFmtOptions::default());
-        diagnostics.add_channel(ChannelAllow::all(), Box::new(tokio::io::stderr()));
+        diagnostics.add_channel(log_level, Box::new(tokio::io::stderr()));
         Arc::new(diagnostics)
     };
 
@@ -114,7 +130,8 @@ pub fn test() {
     let int_domain_width = int_domain.1 - int_domain.0;
     let scaled_x_points = x_points.add_scalar(-int_domain.0) / int_domain_width;
 
-    let moment_grid = integrate::math::moment_fitted(scaled_x_points.as_slice(), |i| 1.0 / (i + 1) as f64);
+    let moment_grid =
+        integrate::math::moment_fitted(scaled_x_points.as_slice(), |i| 1.0 / (i + 1) as f64);
 
     let amp = 0.084;
     let offset = 0.3;

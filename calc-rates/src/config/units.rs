@@ -105,14 +105,14 @@ impl TemperatureUnits {
     /// An appropriate string literal to serve as temperature units such as `K` in `325K`.
     ///
     /// For all units,
-    /// - [TemperatureUnits::Hartree] => `Ha/kB`
-    /// - [TemperatureUnits::ElectronVolt] => `eV/kB`
+    /// - [TemperatureUnits::Hartree] => `Ha`
+    /// - [TemperatureUnits::ElectronVolt] => `eV`
     /// - [TemperatureUnits::Kelvin] => `K`
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Kelvin => "K",
-            Self::ElectronVolt => "eV/kB",
-            Self::Hartree => "Ha/kB",
+            Self::ElectronVolt => "eV",
+            Self::Hartree => "Ha",
         }
     }
     /// Conversion factor to convert from kelvin to this unit.
