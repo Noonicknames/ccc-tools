@@ -30,6 +30,12 @@ pub struct Cli {
 
 #[derive(Clone, clap::Subcommand)]
 pub enum Commands {
+    /// Shorthand for extract
+    X {
+        /// Path to read in configuration.
+        #[arg(short, long, default_value = "cs-extract.ron")]
+        path: String,
+    },
     /// Prepare results according to a config file.
     Extract {
         /// Path to read in configuration.
@@ -104,7 +110,7 @@ pub async fn async_run() -> Result<(), AppError> {
     };
 
     let result = match command {
-        Commands::Extract { path } => {
+        Commands::Extract { path } | Commands::X { path } => {
             if let Err(err) = cmd_extract(&path, &diagnostics).await {
                 diagnostics.write_log_background(err.to_log());
                 Err(err.into())
