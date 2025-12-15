@@ -331,7 +331,7 @@ async fn output_rates_data(
                 * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
 
             // Convert to desired units
-            result = result * rate_converter(*temperature);
+            result = result * rate_converter(*temperature * temp_conversion);
 
             result
         })

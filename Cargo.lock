@@ -340,7 +340,7 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 [[package]]
 name = "la"
 version = "0.1.0"
-source = "git+https://github.com/Noonicknames/la.git#d2b18753ee88e78d15a2d3ec10e2534ae5c23c54"
+source = "git+https://github.com/Noonicknames/la.git#1aac198c870802074a94e1904d2a695b9b549611"
 dependencies = [
  "cblas-sys",
  "cfg-if",
