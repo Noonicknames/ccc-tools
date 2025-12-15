@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{
-        CollisionRateOrStrengthUnits, CollisionRateUnits, CsUnitsOrAuto, EnergyUnitsOrAuto, RangeOrCountSerde, RangeSerde, TemperatureUnits
+        CollisionRateOrStrengthUnits, CollisionRateUnits, CsUnitsOrAuto, EnergyUnitsOrAuto,
+        RangeOrCountSerde, RangeSerde, TemperatureUnits,
     },
     integrate::IntegrationKind,
 };
@@ -82,7 +83,7 @@ impl ConfigSerde {
                 ResultSetSerde {
                     name: "s2P<-s2S".to_owned(),
                     source: "ics.s2P.s2S".to_owned(),
-                    grid: vec![IntegrationGridPoints::NaturalCubic(
+                    grid: vec![IntegrationGridPoints::MonotoneCubic(
                         RangeSerde::RangeFull.into(),
                     )],
                     cs_units: CsUnitsOrAuto::Auto,
@@ -103,7 +104,14 @@ impl ConfigSerde {
                 },
             ],
             output_integrands: false,
-            temperatures: vec![TemperatureGridPoints::Direct(vec![1.0, 2.0, 3.0, 4.0, 5.0])],
+            temperatures: vec![
+                TemperatureGridPoints::Direct(vec![1.0, 2.0, 3.0, 4.0, 5.0]),
+                TemperatureGridPoints::Sequence {
+                    start: 6.0,
+                    end: 10.0,
+                    n: 5,
+                },
+            ],
             temperature_units: TemperatureUnits::ElectronVolt,
             // energy_units: None,
             // cs_units: None,
@@ -219,9 +227,9 @@ impl IntegrationGridPoints {
     ///     ), 2),
     ///     IntegrationGridPoints::NaturalCubic("30".parse().unwrap()),
     /// ];
-    /// 
+    ///
     /// let mut iter = IntegrationGridPoints::flat_iter(&grid_points);
-    /// 
+    ///
     /// assert_eq!(iter.next(), Some(&IntegrationGridPoints::MonotoneCubic("10".parse().unwrap())));
     /// assert_eq!(iter.next(), Some(&IntegrationGridPoints::MonotoneCubic("10".parse().unwrap())));
     /// assert_eq!(iter.next(), Some(&IntegrationGridPoints::NaturalCubic("30".parse().unwrap())));
@@ -236,7 +244,7 @@ impl IntegrationGridPoints {
 }
 
 /// Configuration for calculating rates.
-/// 
+///
 /// This is not directly serialised/deserialised, see [ConfigSerde].
 #[derive(Debug, Default)]
 pub struct Config {
@@ -270,7 +278,7 @@ pub enum TemperatureGridPoints {
 
 impl TemperatureGridPoints {
     /// Convert from a slice of [TemperatureGridPoints] to a flat [Vec] of floating point numbers.
-    /// 
+    ///
     /// This is implemented in terms of [TemperatureGridPoints::write_points].
     pub fn to_points_slice(slice: &[Self]) -> Vec<f64> {
         let mut points = Vec::new();
@@ -309,7 +317,7 @@ impl TemperatureGridPoints {
     }
 }
 
-/// Convert a slice of [IntegrationGridPoints] and given the number of points into a `Vec<(IntegrationKind, Range<usize>)>` denoting the kind of integration to apply to each range of points. 
+/// Convert a slice of [IntegrationGridPoints] and given the number of points into a `Vec<(IntegrationKind, Range<usize>)>` denoting the kind of integration to apply to each range of points.
 pub fn integration_grid_to_points(
     grid: &[IntegrationGridPoints],
     points_count: usize,
