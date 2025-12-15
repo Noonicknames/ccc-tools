@@ -75,4 +75,18 @@ cargo install --git https://github.com/Noonicknames/ccc-tools --package calc-rat
 
 ## From Pre-compiled Binary
 
-ccc-tools is currently unavailable for installation directly as a binary.
+To install calc-rates as a binary, run the following commands,
+
+```bash
+url="https://github.com/noonicknames/ccc-tools/releases/download/v0.1.0/ccc-tools-v0.1.0-x86_64-unknown-linux-gnu.tar.gz"
+curl -o 'ccc-tools.tar.gz' -J -L $url
+tar -xf 'ccc-tools.tar.gz'
+
+rm 'ccc-tools.tar.gz'
+```
+
+After running these commands you should have binaries for both `calc-rates` and `cs-extract` in the current working directory. Feel free to copy them anywhere, for example to `~/bin/`.
+
+> [!NOTE]
+> Pre-compiled binaries are often a few commits behind from possible fixes or general quality-of-life changes.
+> For the latest version, build from source using the instructions outlined before.

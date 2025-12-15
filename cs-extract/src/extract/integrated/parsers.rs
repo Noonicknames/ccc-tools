@@ -256,7 +256,7 @@ where
                     continue;
                 };
 
-                let Some(mut transition) = SingleTransition::new(to, &from[2..]).ok() else {
+                let Some(mut transition) = SingleTransition::new(to, from.trim_start_matches("<-")).ok() else {
                     diagnostics.write_log_background(
                         error!("Invalid transition").with_component(LogComponent::Snippet(
                             Snippet::empty(Some(

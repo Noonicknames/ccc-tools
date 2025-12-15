@@ -474,7 +474,7 @@ where
                     continue;
                 };
 
-                let Some(mut transition) = SingleTransition::new(to, &from[2..]).ok() else {
+                let Some(mut transition) = SingleTransition::new(to, from.trim_start_matches("<-")).ok() else {
                     diagnostics.write_log_background(invalid_transition_log(
                         source.info().file_path.clone(),
                         source.current_line_num(),

@@ -72,7 +72,7 @@ impl ExtractCmdError {
                             err.span.start.line,
                             LineHighlight::new(
                                 err.span.start.col - 1,
-                                err.span.end.col - err.span.start.col,
+                                err.span.end.col.checked_sub(err.span.start.col).unwrap_or(1),
                                 err.to_string(),
                                 LineHighlightTheme::ERROR,
                             ),
