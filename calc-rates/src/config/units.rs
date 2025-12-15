@@ -1,5 +1,65 @@
 use serde::{Deserialize, Serialize};
 
+/// Units of collision rate or strength.
+///
+/// Other than the Kelvin, the temperatures with an energy unit refer to T=E/k_B.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+pub enum CollisionRateOrStrengthUnits {
+    Strength,
+    #[serde(untagged)]
+    Rate(CollisionRateUnits),
+}
+
+impl CollisionRateOrStrengthUnits {
+    /// As an appropriate string literal e.g. `a0^3/s` for atomic units, will be `strength` if this is collision strength which is unitless.
+    ///
+    /// See [CollisionRateOrStrengthUnits::as_str] for details about when this is a collision rate unit.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Strength => "strength",
+            Self::Rate(rate_units) => rate_units.as_str(),
+        }
+    }
+
+    pub fn is_strength(&self) -> bool {
+        match self {
+            Self::Strength => true,
+            Self::Rate(..) => false,
+        }
+    }
+
+    /// Return a closure that, when given the temperature will return the conversion factor from atomic collision rate to this unit.
+    /// 
+    /// Temperature is expected to be given in Hartree/k_B.
+    pub fn converter(&self, degeneracy: u32) -> impl Fn(f64) -> f64 {
+        let rate_conversion = match self {
+            CollisionRateOrStrengthUnits::Strength => None,
+            CollisionRateOrStrengthUnits::Rate(rate) => Some(rate.to_unit_factor()),
+        };
+
+        move |temperature: f64| -> f64 {
+            if let Some(rate_conversion) = rate_conversion {
+                rate_conversion
+            } else {
+                // Conversion factor from some desmos deriving https://www.desmos.com/calculator/ttaagvnwjb
+                temperature.sqrt() * degeneracy as f64 * 0.398942280401
+            }
+        }
+    }
+}
+
+impl From<CollisionRateUnits> for CollisionRateOrStrengthUnits {
+    fn from(value: CollisionRateUnits) -> Self {
+        Self::Rate(value)
+    }
+}
+
+impl Default for CollisionRateOrStrengthUnits {
+    fn default() -> Self {
+        Self::Rate(CollisionRateUnits::default())
+    }
+}
+
 /// Units of collision rate
 ///
 /// Other than the Kelvin, the temperatures with an energy unit refer to T=E/k_B.
@@ -9,6 +69,16 @@ pub enum CollisionRateUnits {
     Atomic,
     CentimetreCubedPerSecond,
     MetreCubedPerSecond,
+}
+
+impl TryFrom<CollisionRateOrStrengthUnits> for CollisionRateUnits {
+    type Error = ();
+    fn try_from(value: CollisionRateOrStrengthUnits) -> Result<Self, Self::Error> {
+        match value {
+            CollisionRateOrStrengthUnits::Rate(rate) => Ok(rate),
+            CollisionRateOrStrengthUnits::Strength => Err(()),
+        }
+    }
 }
 
 impl CollisionRateUnits {
@@ -307,8 +377,8 @@ impl CsUnits {
 }
 
 /// Energy units to assume a data file is in, or automatically deduce from the first line with [EnergyUnitsOrAuto::Auto].
-/// 
-/// 
+///
+///
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub enum EnergyUnitsOrAuto {
     // Automatically figure out the units from the header of a result file
@@ -332,7 +402,6 @@ impl EnergyUnitsOrAuto {
         }
     }
 }
-
 
 /// Units of energy.
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, Hash, PartialEq, Eq)]

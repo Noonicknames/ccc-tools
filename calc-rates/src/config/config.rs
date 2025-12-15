@@ -7,8 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{
-        CollisionRateUnits, CsUnitsOrAuto, EnergyUnitsOrAuto, RangeOrCountSerde, RangeSerde,
-        TemperatureUnits,
+        CollisionRateOrStrengthUnits, CollisionRateUnits, CsUnitsOrAuto, EnergyUnitsOrAuto, RangeOrCountSerde, RangeSerde, TemperatureUnits
     },
     integrate::IntegrationKind,
 };
@@ -37,7 +36,7 @@ pub struct ConfigSerde {
     #[serde(default = "default_output_folder")]
     pub output_folder: String,
     /// Units for collision rate to output.
-    pub collision_rate_units: CollisionRateUnits,
+    pub collision_rate_units: CollisionRateOrStrengthUnits,
 }
 
 fn default_output_folder() -> String {
@@ -56,6 +55,7 @@ pub struct ResultSetSerde {
     pub grid: Vec<IntegrationGridPoints>,
     pub energy_units: EnergyUnitsOrAuto,
     pub cs_units: CsUnitsOrAuto,
+    pub degeneracy: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub output_integrands: Option<bool>,
 }
@@ -68,6 +68,7 @@ impl ResultSetSerde {
             grid: self.grid,
             energy_units: self.energy_units,
             cs_units: self.cs_units,
+            degeneracy: self.degeneracy,
             output_integrands: self.output_integrands.unwrap_or(output_integrands),
         }
     }
@@ -86,6 +87,7 @@ impl ConfigSerde {
                     )],
                     cs_units: CsUnitsOrAuto::Auto,
                     energy_units: EnergyUnitsOrAuto::Auto,
+                    degeneracy: None,
                     output_integrands: None,
                 },
                 ResultSetSerde {
@@ -96,6 +98,7 @@ impl ConfigSerde {
                     )],
                     cs_units: CsUnitsOrAuto::Atomic,
                     energy_units: EnergyUnitsOrAuto::ElectronVolt,
+                    degeneracy: None,
                     output_integrands: None,
                 },
             ],
@@ -105,7 +108,7 @@ impl ConfigSerde {
             // energy_units: None,
             // cs_units: None,
             output_folder: default_output_folder(),
-            collision_rate_units: CollisionRateUnits::Atomic,
+            collision_rate_units: CollisionRateUnits::Atomic.into(),
         }
     }
 
@@ -243,7 +246,7 @@ pub struct Config {
     // pub energy_units: EnergyUnitsOrAuto,
     // pub cs_units: CsUnitsOrAuto,
     pub output_folder: PathBuf,
-    pub collision_rate_units: CollisionRateUnits,
+    pub collision_rate_units: CollisionRateOrStrengthUnits,
 }
 
 /// Provides configuration data for calculating one set of (temperature, rate) results.
@@ -254,6 +257,7 @@ pub struct ResultSet {
     pub grid: Vec<IntegrationGridPoints>,
     pub energy_units: EnergyUnitsOrAuto,
     pub cs_units: CsUnitsOrAuto,
+    pub degeneracy: Option<u32>,
     pub output_integrands: bool,
 }
 

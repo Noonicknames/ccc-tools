@@ -28,7 +28,7 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     config::{
-        CollisionRateUnits, Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits,
+        CollisionRateOrStrengthUnits, Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits,
         EnergyUnitsOrAuto, ResultSet, TemperatureUnits, integration_grid_to_points,
     },
     integrate::{
@@ -174,7 +174,7 @@ async fn process_result_set(
     result_set: ResultSet,
     temperatures: Arc<Vec<f64>>,
     temperature_units: TemperatureUnits,
-    rate_units: CollisionRateUnits,
+    rate_units: CollisionRateOrStrengthUnits,
     output_folder: Arc<PathBuf>,
     diagnostics: Arc<AsyncDiagnostics>,
 ) -> Result<(), std::io::Error> {
@@ -184,9 +184,19 @@ async fn process_result_set(
         grid,
         energy_units,
         cs_units,
+        degeneracy,
         output_integrands,
     } = result_set;
     let name = Arc::new(name);
+
+    let degeneracy = if let Some(degeneracy) = degeneracy {
+        degeneracy
+    } else {
+        if rate_units.is_strength() {
+            diagnostics.write_log_background(warn!("Degeneracy not set for `{}` but collision_rate_units are `Strength`. Will default to degeneracy of 1.", name));
+        }
+        1
+    };
 
     let (energy_vec, cs_vec) = get_energy_cs(&source, energy_units, cs_units, &diagnostics).await?;
     let cs_vec = Arc::new(cs_vec);
@@ -247,6 +257,7 @@ async fn process_result_set(
         Arc::clone(&name),
         Arc::clone(&output_folder),
         rate_units,
+        degeneracy,
         Arc::clone(&cs_vec),
         Arc::clone(&temperatures),
         Arc::clone(&integrator),
@@ -287,7 +298,8 @@ async fn process_result_set(
 async fn output_rates_data(
     name: Arc<String>,
     output_folder: Arc<PathBuf>,
-    rate_units: CollisionRateUnits,
+    rate_units: CollisionRateOrStrengthUnits,
+    degeneracy: u32,
     cs_vec: Arc<Vec<f64>>,
     temperatures: Arc<Vec<f64>>,
     integrator: Arc<SubIntegrators>,
@@ -296,8 +308,7 @@ async fn output_rates_data(
     let temp_conversion =
         TemperatureUnits::conversion_factor(temperature_units, TemperatureUnits::Hartree);
 
-    let rate_conversion =
-        CollisionRateUnits::conversion_factor(CollisionRateUnits::Atomic, rate_units);
+    let rate_converter = rate_units.converter(degeneracy);
 
     let rate_vec = temperatures
         .par_iter()
@@ -320,7 +331,7 @@ async fn output_rates_data(
                 * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
 
             // Convert to desired units
-            result = result * rate_conversion;
+            result = result * rate_converter(*temperature);
 
             result
         })
