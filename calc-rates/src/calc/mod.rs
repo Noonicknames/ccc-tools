@@ -28,8 +28,9 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     config::{
-        CollisionRateOrStrengthUnits, Config, ConfigSerde, CsUnits, CsUnitsOrAuto, EnergyUnits,
-        EnergyUnitsOrAuto, ResultSet, TemperatureUnits, integration_grid_to_points,
+        CalcStrengthContext, CollisionRateOrStrengthUnits, Config, ConfigSerde, CsUnits,
+        CsUnitsOrAuto, EnergyUnits, EnergyUnitsOrAuto, ResultSet, TemperatureUnits,
+        integration_grid_to_points,
     },
     integrate::{
         GaussIntegrator, IntegrationKind, Integrator, Interpolation, MonotoneCubicIntegrator,
@@ -162,8 +163,13 @@ pub async fn cmd_calc(
     }
 
     while let Some(result) = tasks.next().await {
-        if let Err(err) = result {
-            diagnostics.write_log_background(error!("Error whilst reading result set: {}", err));
+        match result {
+            Ok(Ok(())) => (),
+            Ok(Err(err)) => diagnostics.write_log_background(error!("{}", err)),
+            Err(err) => {
+                diagnostics
+                    .write_log_background(error!("Error whilst reading result set: {}", err));
+            }
         }
     }
 
@@ -184,19 +190,17 @@ async fn process_result_set(
         grid,
         energy_units,
         cs_units,
-        degeneracy,
+        calc_strength_ctx,
         output_integrands,
     } = result_set;
     let name = Arc::new(name);
 
-    let degeneracy = if let Some(degeneracy) = degeneracy {
-        degeneracy
-    } else {
-        if rate_units.is_strength() {
-            diagnostics.write_log_background(warn!("Degeneracy not set for `{}` but collision_rate_units are `Strength`. Will default to degeneracy of 1.", name));
-        }
-        1
-    };
+    if rate_units.is_strength() && calc_strength_ctx.is_none() {
+        return Err(std::io::Error::other(format!(
+            "Error processing `{}`, the `calc_strength_ctx` field of a result set must be provided to calculate collision strengths.",
+            name
+        )));
+    }
 
     let (energy_vec, cs_vec) = get_energy_cs(&source, energy_units, cs_units, &diagnostics).await?;
     let cs_vec = Arc::new(cs_vec);
@@ -257,7 +261,7 @@ async fn process_result_set(
         Arc::clone(&name),
         Arc::clone(&output_folder),
         rate_units,
-        degeneracy,
+        calc_strength_ctx,
         Arc::clone(&cs_vec),
         Arc::clone(&temperatures),
         Arc::clone(&integrator),
@@ -299,7 +303,7 @@ async fn output_rates_data(
     name: Arc<String>,
     output_folder: Arc<PathBuf>,
     rate_units: CollisionRateOrStrengthUnits,
-    degeneracy: u32,
+    calc_strength_ctx: Option<CalcStrengthContext>,
     cs_vec: Arc<Vec<f64>>,
     temperatures: Arc<Vec<f64>>,
     integrator: Arc<SubIntegrators>,
@@ -308,7 +312,9 @@ async fn output_rates_data(
     let temp_conversion =
         TemperatureUnits::conversion_factor(temperature_units, TemperatureUnits::Hartree);
 
-    let rate_converter = rate_units.converter(degeneracy);
+    let rate_converter = rate_units
+        .converter(calc_strength_ctx)
+        .expect("A valid rate converter should have been be validated.");
 
     let rate_vec = temperatures
         .par_iter()

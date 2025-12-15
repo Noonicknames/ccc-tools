@@ -5,6 +5,11 @@
             name: "natural_cubic_spline",
             source: "./test_out/ics.s2P.s2S",
             grid: [NaturalCubic("..")],
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 4.0,
+                threshold_energy_units: ElectronVolt,
+            )),
             energy_units: Auto,
             cs_units: Auto,
         ),

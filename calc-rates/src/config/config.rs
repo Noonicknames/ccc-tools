@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{
-        CollisionRateOrStrengthUnits, CollisionRateUnits, CsUnitsOrAuto, EnergyUnitsOrAuto,
-        RangeOrCountSerde, RangeSerde, TemperatureUnits,
+        CollisionRateOrStrengthUnits, CollisionRateUnits, CsUnitsOrAuto, EnergyUnits,
+        EnergyUnitsOrAuto, RangeOrCountSerde, RangeSerde, TemperatureUnits,
     },
     integrate::IntegrationKind,
 };
@@ -56,9 +56,17 @@ pub struct ResultSetSerde {
     pub grid: Vec<IntegrationGridPoints>,
     pub energy_units: EnergyUnitsOrAuto,
     pub cs_units: CsUnitsOrAuto,
-    pub degeneracy: Option<u32>,
+    pub calc_strength_ctx: Option<CalcStrengthContext>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub output_integrands: Option<bool>,
+}
+
+/// Additional data needed to calculate collision strength.
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct CalcStrengthContext {
+    pub degeneracy: u32,
+    pub threshold_energy: f64,
+    pub threshold_energy_units: EnergyUnits,
 }
 
 impl ResultSetSerde {
@@ -69,7 +77,7 @@ impl ResultSetSerde {
             grid: self.grid,
             energy_units: self.energy_units,
             cs_units: self.cs_units,
-            degeneracy: self.degeneracy,
+            calc_strength_ctx: self.calc_strength_ctx,
             output_integrands: self.output_integrands.unwrap_or(output_integrands),
         }
     }
@@ -88,7 +96,11 @@ impl ConfigSerde {
                     )],
                     cs_units: CsUnitsOrAuto::Auto,
                     energy_units: EnergyUnitsOrAuto::Auto,
-                    degeneracy: None,
+                    calc_strength_ctx: Some(CalcStrengthContext {
+                        degeneracy: 1,
+                        threshold_energy: 25.15,
+                        threshold_energy_units: EnergyUnits::ElectronVolt,
+                    }),
                     output_integrands: None,
                 },
                 ResultSetSerde {
@@ -99,7 +111,7 @@ impl ConfigSerde {
                     )],
                     cs_units: CsUnitsOrAuto::Atomic,
                     energy_units: EnergyUnitsOrAuto::ElectronVolt,
-                    degeneracy: None,
+                    calc_strength_ctx: None,
                     output_integrands: None,
                 },
             ],
@@ -270,7 +282,7 @@ pub struct ResultSet {
     pub grid: Vec<IntegrationGridPoints>,
     pub energy_units: EnergyUnitsOrAuto,
     pub cs_units: CsUnitsOrAuto,
-    pub degeneracy: Option<u32>,
+    pub calc_strength_ctx: Option<CalcStrengthContext>,
     pub output_integrands: bool,
 }
 
