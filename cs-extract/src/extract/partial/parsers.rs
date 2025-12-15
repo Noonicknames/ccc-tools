@@ -1,12 +1,13 @@
 use std::{collections::HashMap, future::Future, num::ParseFloatError, sync::Arc};
 
 use diagnostics::{
+    Log, LogComponent,
     components::snippet::{
         Footer, FooterKind, LineHighlight, LineHighlightTheme, Snippet, SnippetChunk, SnippetLine,
         SnippetLineKind,
     },
     diagnostics::AsyncDiagnostics,
-    error, warn, Log, LogComponent,
+    error, warn,
 };
 use state_parse::r#async::{AsyncParseSource, AsyncSectionParser, SourceInfo};
 use unicode_width::UnicodeWidthStr;
@@ -72,7 +73,7 @@ where
                         line: line,
                         line_num: source.current_line_num(),
                         failed_units_str: "<not-found>".to_string(),
-                    })
+                    });
                 }
             };
 
@@ -88,7 +89,7 @@ where
                         failed_units_str: units_str.to_owned(),
                         line: line,
                         line_num: source.current_line_num(),
-                    })
+                    });
                 }
             };
             state.units_from = Some(units);
@@ -159,7 +160,7 @@ where
                         line,
                         line_num: source.current_line_num(),
                         context: "Expected more columns.".to_owned(),
-                    })
+                    });
                 }
             };
 
@@ -176,7 +177,7 @@ where
                         line,
                         line_num: source.current_line_num(),
                         err,
-                    })
+                    });
                 }
             };
 
@@ -447,6 +448,14 @@ where
             let mut transitions_order_counter = HashMap::new();
 
             let header = format!("{:>3}", context.partial_wave);
+            let has_header = |line: &String| {
+                line.starts_with(&header)
+                    && line
+                        .split_whitespace()
+                        .next()
+                        .and_then(|partial_wave| partial_wave.parse().ok())
+                        == Some(context.partial_wave)
+            };
             let mut extracted_count = 0; // Number of columns extracted
             loop {
                 // Example line
@@ -455,7 +464,7 @@ where
                 let line = match source
                     .next()
                     .await?
-                    .filter(|line| line.starts_with(&header))
+                    .filter(has_header)
                 {
                     Some(line) => line,
                     None => break,
@@ -474,7 +483,9 @@ where
                     continue;
                 };
 
-                let Some(mut transition) = SingleTransition::new(to, from.trim_start_matches("<-")).ok() else {
+                let Some(mut transition) =
+                    SingleTransition::new(to, from.trim_start_matches("<-")).ok()
+                else {
                     diagnostics.write_log_background(invalid_transition_log(
                         source.info().file_path.clone(),
                         source.current_line_num(),
