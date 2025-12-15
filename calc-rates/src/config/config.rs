@@ -108,8 +108,13 @@ impl ConfigSerde {
                 TemperatureGridPoints::Direct(vec![1.0, 2.0, 3.0, 4.0, 5.0]),
                 TemperatureGridPoints::Sequence {
                     start: 6.0,
-                    end: 10.0,
-                    n: 5,
+                    end: 9.0,
+                    n: 4,
+                },
+                TemperatureGridPoints::LogSequence {
+                    start: 10.0,
+                    end: 1e+6,
+                    n: 10,
                 },
             ],
             temperature_units: TemperatureUnits::ElectronVolt,
@@ -272,6 +277,7 @@ pub struct ResultSet {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum TemperatureGridPoints {
     Direct(Vec<f64>),
+    LogSequence { start: f64, end: f64, n: usize },
     Sequence { start: f64, end: f64, n: usize },
     StepSequence { start: f64, step: f64, end: f64 },
 }
@@ -294,6 +300,21 @@ impl TemperatureGridPoints {
         match self {
             Self::Direct(points) => {
                 writer.extend_from_slice(&points);
+            }
+            &Self::LogSequence { start, end, n } => {
+                // I am ignoring the unintended behaviour if either value is negative for now.
+                let end_div_start = end / start;
+                writer.reserve(n as usize);
+                if n == 1 {
+                    writer.push(start * (end_div_start).sqrt())
+                } else if n > 1 {
+                    let end_div_start_nth_root = end_div_start.powf(1.0 / (n - 1) as f64);
+                    writer.push(start);
+                    for i in 1..n - 1 {
+                        writer.push(start * end_div_start_nth_root.powi(i as i32));
+                    }
+                    writer.push(end);
+                }
             }
             &Self::Sequence { start, end, n } => {
                 writer.reserve(n as usize);

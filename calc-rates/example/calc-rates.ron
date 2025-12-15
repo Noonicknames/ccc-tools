@@ -31,8 +31,8 @@
         ),
     ],
     temperatures: [
-        // Sequence(start: 11604.525, end: 116045.25, n: 10),
-        Sequence(start: 1.0, end: 10.0, n: 10)
+        Sequence(start: 1.0, end: 4.0, n: 4),
+        LogSequence(start: 5.0, end: 100, n: 5),
     ],
     // temperature_units: Kelvin,
     temperature_units: ElectronVolt,
