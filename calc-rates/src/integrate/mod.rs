@@ -75,7 +75,7 @@ pub trait Interpolation: Send + Sync {
     fn integral(&self, epsilon: f64) -> f64 {
         let interpolate_range = self.interpolate_range();
 
-        let mut intervals = 512;
+        let mut intervals = 1024*8;
 
         let xs = Vec::from_iter((0..=intervals).map(|i| {
             let t = i as f64 / intervals as f64;

@@ -1,19 +1,5 @@
 (
     result_sets: [
-        // (
-        //     name: "s2P<-s2S",
-        //     source: "./test_out/g,n=16(bound)/ics.s2P.s2S",
-        //     grid: [
-        //         MonotoneCubic(".."),
-        //     ],
-        //     energy_units: Auto,
-        //     cs_units: Auto,
-        //     calc_strength_ctx: Some((
-        //         degeneracy: 1,
-        //         threshold_energy: 9.30660,
-        //         threshold_energy_units: ElectronVolt,
-        //     )),
-        // ),
         (
             name: "t2P<-s2S(g,n=16(bound))",
             source: "./test_out/g,n=16(bound)/ics.t2P.s2S",
@@ -28,7 +14,7 @@
                 threshold_energy_units: ElectronVolt,
             )),
         ),
-                (
+        (
             name: "t2P<-s2S(f,n=14(full))",
             source: "./test_out/f,n=14(full)/ics.t2P.s2S",
             grid: [
@@ -38,13 +24,14 @@
             cs_units: Auto,
             calc_strength_ctx: Some((
                 degeneracy: 1,
-                threshold_energy: 4.61794,
+                threshold_energy: 4.61446,
                 threshold_energy_units: ElectronVolt,
             )),
         ),
+
         (
-            name: "s4S<-s2S(g,n=16(bound))",
-            source: "./test_out/g,n=16(bound)/ics.s4S.s2S",
+            name: "s5S<-s2S(g,n=16(bound))",
+            source: "./test_out/g,n=16(bound)/ics.s5S.s2S",
             grid: [
                 MonotoneCubic(".."),
             ],
@@ -52,7 +39,166 @@
             cs_units: Auto,
             calc_strength_ctx: Some((
                 degeneracy: 1,
-                threshold_energy: 17.43759,
+                threshold_energy: 20.81773,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+        (
+            name: "s5S<-s2S(f,n=14(full))",
+            source: "./test_out/f,n=14(full)/ics.s5S.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 20.81267,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+
+        (
+            name: "s3D<-s2S(g,n=16(bound))",
+            source: "./test_out/g,n=16(bound)/ics.s3D.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 12.82305,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+        (
+            name: "s3D<-s2S(f,n=14(full))",
+            source: "./test_out/f,n=14(full)/ics.s3D.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 12.82102,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+
+        (
+            name: "s4D<-s2S(g,n=16(bound))",
+            source: "./test_out/g,n=16(bound)/ics.s4D.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 19.21690,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+        (
+            name: "s4D<-s2S(f,n=14(full))",
+            source: "./test_out/f,n=14(full)/ics.s4D.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 19.21200,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+
+        (
+            name: "s5D<-s2S(g,n=16(bound))",
+            source: "./test_out/g,n=16(bound)/ics.s5D.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 21.77351,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+        (
+            name: "s5D<-s2S(f,n=14(full))",
+            source: "./test_out/f,n=14(full)/ics.s5D.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 21.76808,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+
+        (
+            name: "t3D<-s2S(g,n=16(bound))",
+            source: "./test_out/g,n=16(bound)/ics.t3D.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 18.67688,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+        (
+            name: "t3D<-s2S(f,n=14(full))",
+            source: "./test_out/f,n=14(full)/ics.t3D.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 18.67109,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+
+        (
+            name: "t4F<-s2S(g,n=16(bound))",
+            source: "./test_out/g,n=16(bound)/ics.t4F.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 21.67420,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+        (
+            name: "t4F<-s2S(f,n=14(full))",
+            source: "./test_out/f,n=14(full)/ics.t4F.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 21.68468,
                 threshold_energy_units: ElectronVolt,
             )),
         ),
