@@ -1,49 +1,71 @@
 (
-    // Sets of results to extract
     result_sets: [
+        // (
+        //     name: "s2P<-s2S",
+        //     source: "./test_out/g,n=16(bound)/ics.s2P.s2S",
+        //     grid: [
+        //         MonotoneCubic(".."),
+        //     ],
+        //     energy_units: Auto,
+        //     cs_units: Auto,
+        //     calc_strength_ctx: Some((
+        //         degeneracy: 1,
+        //         threshold_energy: 9.30660,
+        //         threshold_energy_units: ElectronVolt,
+        //     )),
+        // ),
         (
-            name: "natural_cubic_spline",
-            source: "./test_out/ics.s2P.s2S",
-            grid: [NaturalCubic("..")],
+            name: "t2P<-s2S(g,n=16(bound))",
+            source: "./test_out/g,n=16(bound)/ics.t2P.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
             calc_strength_ctx: Some((
                 degeneracy: 1,
-                threshold_energy: 4.0,
+                threshold_energy: 4.61794,
                 threshold_energy_units: ElectronVolt,
             )),
+        ),
+                (
+            name: "t2P<-s2S(f,n=14(full))",
+            source: "./test_out/f,n=14(full)/ics.t2P.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
             energy_units: Auto,
             cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 4.61794,
+                threshold_energy_units: ElectronVolt,
+            )),
         ),
         (
-            name: "monotone_cubic_spline",
-            source: "./test_out/ics.s2P.s2S",
-            grid: [MonotoneCubic("..")],
+            name: "s4S<-s2S(g,n=16(bound))",
+            source: "./test_out/g,n=16(bound)/ics.s4S.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
             energy_units: Auto,
             cs_units: Auto,
-        ),
-        (
-            name: "auto_gauss",
-            source: "./test_out/ics.s2P.s2S",
-            grid: [AutoGauss("..")],
-            energy_units: Auto,
-            cs_units: Auto,
-        ),
-        (
-            name: "linear",
-            source: "./test_out/ics.s2P.s2S",
-            grid: [Repeat(Gauss("2"), 100)],
-            energy_units: Auto,
-            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 17.43759,
+                threshold_energy_units: ElectronVolt,
+            )),
         ),
     ],
     temperatures: [
-        Sequence(start: 1.0, end: 4.0, n: 4),
-        LogSequence(start: 5.0, end: 100, n: 5),
+        LogSequence(
+            start: 1e+3,
+            end: 1e+6,
+            n: 300,
+        ),
     ],
-    // temperature_units: Kelvin,
-    temperature_units: ElectronVolt,
+    temperature_units: Kelvin,
+    output_integrands: false,
     output_folder: "./calc-rates-out",
-    output_integrands: true,
-    // collision_rate_units: Atomic,
-    // collision_rate_units: CentimetreCubedPerSecond,
     collision_rate_units: Strength,
 )

@@ -82,5 +82,7 @@ pub async fn cmd_new(
     let template_ser =
         ron::ser::to_string_pretty(&template, ron::ser::PrettyConfig::default()).unwrap();
     file.write_all(template_ser.as_bytes()).await.unwrap();
+    println!("`calc-rates` config file written to `{}`", path);
+
     Ok(())
 }

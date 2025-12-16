@@ -1,0 +1,49 @@
+(
+    // Sets of results to extract
+    result_sets: [
+        (
+            name: "natural_cubic_spline",
+            source: "./test_out/ics.s2P.s2S",
+            grid: [NaturalCubic("..")],
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 4.0,
+                threshold_energy_units: ElectronVolt,
+            )),
+            energy_units: Auto,
+            cs_units: Auto,
+        ),
+        (
+            name: "monotone_cubic_spline",
+            source: "./test_out/ics.s2P.s2S",
+            grid: [MonotoneCubic("..")],
+            energy_units: Auto,
+            cs_units: Auto,
+        ),
+        (
+            name: "auto_gauss",
+            source: "./test_out/ics.s2P.s2S",
+            grid: [AutoGauss("..")],
+            energy_units: Auto,
+            cs_units: Auto,
+        ),
+        (
+            name: "linear",
+            source: "./test_out/ics.s2P.s2S",
+            grid: [Repeat(Gauss("2"), 100)],
+            energy_units: Auto,
+            cs_units: Auto,
+        ),
+    ],
+    temperatures: [
+        Sequence(start: 1.0, end: 4.0, n: 4),
+        LogSequence(start: 5.0, end: 100, n: 5),
+    ],
+    // temperature_units: Kelvin,
+    temperature_units: ElectronVolt,
+    output_folder: "./calc-rates-out",
+    output_integrands: true,
+    // collision_rate_units: Atomic,
+    // collision_rate_units: CentimetreCubedPerSecond,
+    collision_rate_units: Strength,
+)

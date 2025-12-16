@@ -312,34 +312,68 @@ async fn output_rates_data(
     let temp_conversion =
         TemperatureUnits::conversion_factor(temperature_units, TemperatureUnits::Hartree);
 
-    let rate_converter = rate_units
-        .converter(calc_strength_ctx)
-        .expect("A valid rate converter should have been be validated.");
-
+    // I may want to tokio task spawn_blocking this.
     let rate_vec = temperatures
         .par_iter()
         .map(|temperature| {
             let recip_temp = 1.0 / (temperature * temp_conversion);
             // Integrand according to Joel
-            // Atomic units kB = 1, T is converted to Hartree, energy in hartree
+            // Atomic units kB = 1, T is converted to Hartree/kB, energy in hartree
             // x is energy, y is cross section
-            let map = move |x: &[f64], y: &mut [f64]| {
-                x.iter()
-                    .zip(y.iter_mut())
-                    .for_each(|(&x, y)| *y = *y * x * (-x * recip_temp).exp());
-            };
 
-            let mut result = integrator.integrate_mapped(&cs_vec, &map, 1e-6);
-
-            // Factor in front
-            result = result
-                * std::f64::consts::PI.sqrt().recip()
-                * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
-
-            // Convert to desired units
-            result = result * rate_converter(*temperature * temp_conversion);
-
-            result
+            // Either do strength integral, starting from threshold or from 0.0 to directly calculate rates.
+            // Starting from threshold is more numerically stable.
+            match (rate_units, &calc_strength_ctx) {
+                (
+                    rate_units,
+                    Some(
+                        ctx @ CalcStrengthContext {
+                            threshold_energy,
+                            threshold_energy_units,
+                            degeneracy,
+                        },
+                    ),
+                ) => {
+                    let integral = integrator.integrate_mapped(
+                        &cs_vec,
+                        &{
+                            let threshold_energy =
+                                *threshold_energy * threshold_energy_units.to_hartree_factor();
+                            move |x: &[f64], y: &mut [f64]| {
+                                x.iter().zip(y.iter_mut()).for_each(|(&x, y)| {
+                                    if x < threshold_energy {
+                                        *y = 0.0;
+                                    } else {
+                                        *y = *y * x * (-(x - threshold_energy) * recip_temp).exp()
+                                    }
+                                });
+                            }
+                        },
+                        1e-6,
+                    );
+                    integral * 2.0 * *degeneracy as f64
+                        / (std::f64::consts::PI * temperature * temp_conversion)
+                        * rate_units.from_strength_factor(ctx, temperature * temp_conversion)
+                }
+                (CollisionRateOrStrengthUnits::Rate(rate_units), None) => {
+                    let integral = integrator.integrate_mapped(
+                        &cs_vec,
+                        &move |x: &[f64], y: &mut [f64]| {
+                            x.iter()
+                                .zip(y.iter_mut())
+                                .for_each(|(&x, y)| *y = *y * x * (-x * recip_temp).exp());
+                        },
+                        1e-6,
+                    );
+                    let rate = integral
+                        * std::f64::consts::PI.sqrt().recip()
+                        * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
+                    rate * rate_units.to_unit_factor()
+                }
+                (CollisionRateOrStrengthUnits::Strength, None) => unimplemented!(
+                    "`Strength` with no context should have been validated and prevented."
+                ),
+            }
         })
         .collect::<Vec<_>>();
 
@@ -443,7 +477,7 @@ async fn output_integrands_data(
             }
 
             let file_name =
-                integrands_folder.join(format!("T={}{}", temperature, temperature_units.as_str()));
+                integrands_folder.join(format!("T-{}{}", temperature, temperature_units.as_str()));
             let file = OpenOptions::new()
                 .create(true)
                 .write(true)

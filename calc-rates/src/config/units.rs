@@ -30,53 +30,30 @@ impl CollisionRateOrStrengthUnits {
         }
     }
 
-    /// Return a closure that, when given the temperature will return the conversion factor from atomic collision rate to this unit.
-    ///
-    /// Temperature is expected to be given in Hartree/k_B and threshold energy is expected to be given in Hartrees.
-    pub fn converter(&self, ctx: Option<CalcStrengthContext>) -> Option<impl Fn(f64) -> f64> {
-        enum ConverterData {
-            Strength {
-                threshold_energy: f64,
-                degeneracy: f64,
-            },
-            Rate {
-                conversion: f64,
-            },
-        }
+    /// Factor to multiply by to convert from a strength value to the current unit.
+    pub fn from_strength_factor(&self, ctx: &CalcStrengthContext, temperature: f64) -> f64 {
+        self.to_strength_factor(ctx, temperature).recip()
+    }
 
-        let data = match self {
-            Self::Rate(rate_units) => ConverterData::Rate {
-                conversion: rate_units.to_unit_factor(),
-            },
-            Self::Strength => {
+    /// Factor to multiply by to convert to a strength value from the current unit.
+    pub fn to_strength_factor(&self, ctx: &CalcStrengthContext, temperature: f64) -> f64 {
+        match self {
+            Self::Strength => 1.0,
+            Self::Rate(rate_units) => {
                 let CalcStrengthContext {
                     degeneracy,
                     threshold_energy,
                     threshold_energy_units,
-                } = ctx?;
-
-                ConverterData::Strength {
-                    threshold_energy: threshold_energy * threshold_energy_units.to_hartree_factor(),
-                    degeneracy: degeneracy as f64,
-                }
+                } = ctx;
+                let threshold_energy =
+                    threshold_energy * threshold_energy_units.to_hartree_factor();
+                // Conversion factor from some desmos deriving https://www.desmos.com/calculator/ttaagvnwjb
+                temperature.sqrt()
+                    * *degeneracy as f64
+                    * 0.398942280401
+                    * (threshold_energy / temperature).exp() * rate_units.to_atomic_factor()
             }
-        };
-
-        Some(move |temperature: f64| -> f64 {
-            match data {
-                ConverterData::Rate { conversion } => conversion,
-                ConverterData::Strength {
-                    threshold_energy,
-                    degeneracy,
-                } => {
-                    // Conversion factor from some desmos deriving https://www.desmos.com/calculator/ttaagvnwjb
-                    temperature.sqrt()
-                        * degeneracy as f64
-                        * 0.398942280401
-                        * (threshold_energy / temperature).exp()
-                }
-            }
-        })
+        }
     }
 }
 
