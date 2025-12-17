@@ -38,3 +38,5 @@ ordered-float.workspace = true
 futures.workspace = true
 rayon.workspace = true
 regex.workspace = true
+integrate.workspace = true
+file-util.workspace = true

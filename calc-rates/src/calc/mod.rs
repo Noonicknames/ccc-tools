@@ -14,7 +14,9 @@ use diagnostics::{
     diagnostics::AsyncDiagnostics,
     error, info, warn,
 };
+use file_util::ensure_folder_exists;
 use futures::stream::FuturesUnordered;
+use integrate::integrators::{GaussIntegrator, IntegrationKind, Integrator, interpolation::Interpolation, MonotoneCubicIntegrator, NaturalCubicIntegrator, SubIntegrators};
 use la::{BlasLib, LapackeLib};
 use ordered_float::OrderedFloat;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -32,11 +34,6 @@ use crate::{
         CsUnitsOrAuto, EnergyUnits, EnergyUnitsOrAuto, ResultSet, TemperatureUnits,
         integration_grid_to_points,
     },
-    integrate::{
-        GaussIntegrator, IntegrationKind, Integrator, Interpolation, MonotoneCubicIntegrator,
-        NaturalCubicIntegrator, SubIntegrators,
-    },
-    util::ensure_folder_exists,
 };
 
 #[derive(thiserror::Error, Debug)]

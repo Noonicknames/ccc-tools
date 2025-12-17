@@ -1,0 +1,22 @@
+[package]
+name = "integrate"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+
+[features]
+serde = ["dep:serde"]
+
+[dependencies]
+la.workspace = true
+nalgebra.workspace = true
+rustnomial.workspace = true
+serde = { workspace = true, optional = true }
+special.workspace = true
+
+[dev-dependencies]
+arena-allocator = "0.1.0"
+
+la = { workspace = true, features = ["dynamic"]}

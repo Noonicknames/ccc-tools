@@ -6,18 +6,16 @@ use diagnostics::{
     diagnostics::{AsyncDiagnostics, ChannelAllow},
     error,
 };
+use integrate::math::moment_fitted;
 // use la::{BlasLib, LapackeLib};
 use nalgebra::dvector;
 
 use crate::{
     calc::{CalcCmdError, cmd_calc},
-    integrate::math,
     new::{NewCmdError, cmd_new},
 };
 
 pub mod config;
-pub mod integrate;
-pub mod util;
 
 pub mod calc;
 pub mod new;
@@ -172,7 +170,7 @@ pub fn test() {
         let int_domain = (x_points[0], 8.0);
         let int_domain_width = int_domain.1 - int_domain.0;
         let scaled_x_points = x_points.add_scalar(-int_domain.0) / int_domain_width;
-        let moment_grid = math::moment_fitted(scaled_x_points.as_slice(), |i| 1.0 / (i + 1) as f64);
+        let moment_grid = moment_fitted(scaled_x_points.as_slice(), |i| 1.0 / (i + 1) as f64);
 
         let worse_result = moment_grid.eval_fn(|x| {
             let x = x[0] * int_domain_width + int_domain.0;

@@ -3,14 +3,12 @@ use std::{
     path::PathBuf,
 };
 
+use integrate::integrators::IntegrationKind;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    config::{
-        CollisionRateOrStrengthUnits, CollisionRateUnits, CsUnitsOrAuto, EnergyUnits,
-        EnergyUnitsOrAuto, RangeOrCountSerde, RangeSerde, TemperatureUnits,
-    },
-    integrate::IntegrationKind,
+use crate::config::{
+    CollisionRateOrStrengthUnits, CollisionRateUnits, CsUnitsOrAuto, EnergyUnits,
+    EnergyUnitsOrAuto, RangeOrCountSerde, RangeSerde, TemperatureUnits,
 };
 
 /// User facing struct which is directly serialized and deserialized.

@@ -1,10 +1,12 @@
 use la::{EigenRange, LapackeFunctions};
 use nalgebra::{ComplexField, Const, DMatrix, DVector, DVectorView, Dyn, MatrixView};
 use rustnomial::{Evaluable, Integrable, Polynomial, Roots, polynomial};
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use special::Gamma;
 
-#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Grid<T>
 where
     T: ComplexField,

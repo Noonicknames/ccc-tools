@@ -1,5 +1,5 @@
 [workspace]
-members = ["calc-rates", "cs-extract", "tester"]
+members = ["calc-rates", "cs-extract", "subcrates/file-util", "subcrates/integrate", "tester"]
 resolver = "2"
 
 [workspace.package]
@@ -11,6 +11,9 @@ readme = "README.md"
 
 
 [workspace.dependencies]
+file-util = { path = "subcrates/file-util" }
+integrate = { path = "subcrates/integrate" }
+
 nalgebra = { version = "0.32" }
 la = { git = "https://github.com/Noonicknames/la.git", default-features = false }
 rustnomial = { version = "0.3" }

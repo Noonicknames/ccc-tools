@@ -1,0 +1,10 @@
+[package]
+name = "file-util"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+
+[dependencies]
+tokio.workspace = true
