@@ -192,14 +192,7 @@ pub trait Interpolation: Send + Sync {
 
                 result
             };
-
-            println!(
-                "Error {}: {}",
-                intervals,
-                (current_answer - prev_answer).abs()
-            );
             if (current_answer - prev_answer).abs() < epsilon {
-                println!("Partitions: {}", intervals);
                 break current_answer;
             } else {
                 prev_answer = current_answer;

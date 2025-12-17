@@ -3,7 +3,10 @@ use std::{ops::RangeInclusive, sync::Arc};
 use la::LapackeFunctionsStatic;
 use nalgebra::DVector;
 
-use crate::integrators::{Integrator, interpolation::{ApplyFunc, Interpolation}};
+use crate::integrators::{
+    Integrator,
+    interpolation::{ApplyFunc, Interpolation},
+};
 
 pub struct NaturalCubicIntegrator {
     range: RangeInclusive<f64>,
@@ -25,6 +28,10 @@ impl Integrator for NaturalCubicIntegrator {
     ) -> f64 {
         self.interpolation_mapped(ys, map).integral(epsilon)
     }
+    fn integrate_interest_points(&self, ys: &[f64], interest_points: &[f64], epsilon: f64) -> f64 {
+        self.interpolation(ys)
+            .integral_interest_points(interest_points, epsilon)
+    }
     fn interpolation_mapped<'a>(
         &self,
         _xs: &'a [f64],
@@ -32,6 +39,16 @@ impl Integrator for NaturalCubicIntegrator {
         map: &'a (dyn Fn(&[f64], &mut [f64]) + Send + Sync + 'a),
     ) -> Option<Box<dyn Interpolation + 'a>> {
         Some(Box::new(self.interpolation_mapped(ys, map)))
+    }
+    fn integrate_mapped_interest_points(
+        &self,
+        ys: &[f64],
+        map: &(dyn Fn(&[f64], &mut [f64]) + Send + Sync),
+        interest_points: &[f64],
+        epsilon: f64,
+    ) -> f64 {
+        self.interpolation_mapped(ys, map)
+            .integral_interest_points(interest_points, epsilon)
     }
     fn integrate(&self, ys: &[f64], _epsilon: f64) -> f64 {
         self.interpolation(ys).integral()
@@ -260,10 +277,7 @@ mod tests {
 
     use la::{BlasLib, LapackeLib};
 
-    use crate::integrators::{
-        Integrator, Interpolation,
-        NaturalCubicIntegrator,
-    };
+    use crate::integrators::{Integrator, Interpolation, NaturalCubicIntegrator};
 
     #[test]
     fn natural_cubic_interp() {

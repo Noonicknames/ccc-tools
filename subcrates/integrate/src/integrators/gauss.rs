@@ -1,14 +1,19 @@
 use nalgebra::{DMatrix, DVector};
 
-use crate::{integrators::{Integrator, SubIntegrators}, math::{Grid, moment_fitted}};
-
-
+use crate::{
+    integrators::{Integrator, SubIntegrators},
+    math::{Grid, moment_fitted},
+};
 
 pub struct GaussIntegrator {
     grid: Grid<f64>,
 }
 
 impl Integrator for GaussIntegrator {
+    fn integrate_interest_points(&self, ys: &[f64], interest_points: &[f64], epsilon: f64) -> f64 {
+        _ = interest_points;
+        self.integrate(ys, epsilon)
+    }
     fn integrate_mapped(
         &self,
         ys: &[f64],
@@ -19,6 +24,16 @@ impl Integrator for GaussIntegrator {
 
         (map)(self.grid.points.as_slice(), &mut ys);
         self.grid.eval(&ys)
+    }
+    fn integrate_mapped_interest_points(
+        &self,
+        ys: &[f64],
+        map: &(dyn Fn(&[f64], &mut [f64]) + Send + Sync),
+        interest_points: &[f64],
+        epsilon: f64,
+    ) -> f64 {
+        _ = interest_points;
+        self.integrate_mapped(ys, map, epsilon)
     }
     fn integrate(&self, ys: &[f64], _epsilon: f64) -> f64 {
         self.grid.eval(ys)

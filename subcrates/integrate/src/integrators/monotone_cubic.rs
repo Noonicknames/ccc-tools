@@ -13,6 +13,10 @@ pub struct MonotoneCubicIntegrator {
 }
 
 impl Integrator for MonotoneCubicIntegrator {
+    fn integrate_interest_points(&self, ys: &[f64], interest_points: &[f64], epsilon: f64) -> f64 {
+        self.interpolation(ys)
+            .integral_interest_points(interest_points, epsilon)
+    }
     fn integrate(&self, ys: &[f64], _epsilon: f64) -> f64 {
         self.interpolation(ys).integral()
     }
@@ -26,6 +30,16 @@ impl Integrator for MonotoneCubicIntegrator {
         epsilon: f64,
     ) -> f64 {
         self.interpolation_mapped(ys, map).integral(epsilon)
+    }
+    fn integrate_mapped_interest_points(
+        &self,
+        ys: &[f64],
+        map: &(dyn Fn(&[f64], &mut [f64]) + Send + Sync),
+        interest_points: &[f64],
+        epsilon: f64,
+    ) -> f64 {
+        self.interpolation_mapped(ys, map)
+            .integral_interest_points(interest_points, epsilon)
     }
     fn interpolation_mapped<'a>(
         &self,

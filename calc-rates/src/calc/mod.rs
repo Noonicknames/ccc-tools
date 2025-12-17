@@ -16,7 +16,10 @@ use diagnostics::{
 };
 use file_util::ensure_folder_exists;
 use futures::stream::FuturesUnordered;
-use integrate::integrators::{GaussIntegrator, IntegrationKind, Integrator, interpolation::Interpolation, MonotoneCubicIntegrator, NaturalCubicIntegrator, SubIntegrators};
+use integrate::integrators::{
+    GaussIntegrator, IntegrationKind, Integrator, MonotoneCubicIntegrator, NaturalCubicIntegrator,
+    SubIntegrators, interpolation::Interpolation,
+};
 use la::{BlasLib, LapackeLib};
 use ordered_float::OrderedFloat;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -28,12 +31,9 @@ use tokio::{
 use tokio_stream::{StreamExt, wrappers::LinesStream};
 use unicode_width::UnicodeWidthStr;
 
-use crate::{
-    config::{
-        CalcStrengthContext, CollisionRateOrStrengthUnits, Config, ConfigSerde, CsUnits,
-        CsUnitsOrAuto, EnergyUnits, EnergyUnitsOrAuto, ResultSet, TemperatureUnits,
-        integration_grid_to_points,
-    },
+use crate::config::{
+    CalcStrengthContext, CollisionRateOrStrengthUnits, Config, ConfigSerde, CsUnits, CsUnitsOrAuto,
+    EnergyUnits, EnergyUnitsOrAuto, ResultSet, TemperatureUnits, integration_grid_to_points,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -259,6 +259,7 @@ async fn process_result_set(
         Arc::clone(&output_folder),
         rate_units,
         calc_strength_ctx,
+        Arc::clone(&energy_vec),
         Arc::clone(&cs_vec),
         Arc::clone(&temperatures),
         Arc::clone(&integrator),
@@ -301,6 +302,7 @@ async fn output_rates_data(
     output_folder: Arc<PathBuf>,
     rate_units: CollisionRateOrStrengthUnits,
     calc_strength_ctx: Option<CalcStrengthContext>,
+    energy_vec: Arc<Vec<f64>>,
     cs_vec: Arc<Vec<f64>>,
     temperatures: Arc<Vec<f64>>,
     integrator: Arc<SubIntegrators>,
@@ -331,7 +333,7 @@ async fn output_rates_data(
                         },
                     ),
                 ) => {
-                    let integral = integrator.integrate_mapped(
+                    let integral = integrator.integrate_mapped_interest_points(
                         &cs_vec,
                         &{
                             let threshold_energy =
@@ -346,6 +348,7 @@ async fn output_rates_data(
                                 });
                             }
                         },
+                        &energy_vec,
                         1e-6,
                     );
                     integral * 2.0 * *degeneracy as f64
@@ -353,18 +356,21 @@ async fn output_rates_data(
                         * rate_units.from_strength_factor(ctx, temperature * temp_conversion)
                 }
                 (CollisionRateOrStrengthUnits::Rate(rate_units), None) => {
-                    let integral = integrator.integrate_mapped(
+                    let start_energy = energy_vec.first().cloned().unwrap_or(0.0);
+                    let integral = integrator.integrate_mapped_interest_points(
                         &cs_vec,
                         &move |x: &[f64], y: &mut [f64]| {
-                            x.iter()
-                                .zip(y.iter_mut())
-                                .for_each(|(&x, y)| *y = *y * x * (-x * recip_temp).exp());
+                            x.iter().zip(y.iter_mut()).for_each(|(&x, y)| {
+                                *y = *y * x * (-(x - start_energy) * recip_temp).exp()
+                            });
                         },
+                        &energy_vec,
                         1e-6,
                     );
                     let rate = integral
                         * std::f64::consts::PI.sqrt().recip()
-                        * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0);
+                        * (2.0 / (temperature * temp_conversion)).powf(3.0 / 2.0)
+                        * (start_energy * recip_temp).exp();
                     rate * rate_units.to_unit_factor()
                 }
                 (CollisionRateOrStrengthUnits::Strength, None) => unimplemented!(

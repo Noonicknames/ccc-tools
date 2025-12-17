@@ -1,5 +1,5 @@
 
-final_state = "t4F"
+final_state = "s3D"
 
 set logscale x
 set xrange [1e+3:1e+6]

@@ -23,6 +23,7 @@ pub enum IntegrationKind {
 
 pub trait Integrator: Send + Sync {
     fn integrate(&self, ys: &[f64], epsilon: f64) -> f64;
+    fn integrate_interest_points(&self, ys: &[f64], interest_points: &[f64], epsilon: f64) -> f64;
 
     fn integrate_mapped(
         &self,
@@ -42,6 +43,14 @@ pub trait Integrator: Send + Sync {
         _ = (xs, ys, map);
         None
     }
+    fn integrate_mapped_interest_points(
+        &self,
+        ys: &[f64],
+        map: &(dyn Fn(&[f64], &mut [f64]) + Send + Sync),
+        interest_points: &[f64],
+        epsilon: f64,
+    ) -> f64;
+
     /// Return an interpolation implementing [Interpolation], if supported.
     fn interpolation<'a>(
         &self,
@@ -133,6 +142,14 @@ impl SubIntegrators {
 }
 
 impl Integrator for SubIntegrators {
+    fn integrate_interest_points(&self, ys: &[f64], interest_points: &[f64], epsilon: f64) -> f64 {
+        self.partial
+            .iter()
+            .map(|(range, integrator)| {
+                integrator.integrate_interest_points(&ys[range.clone()], interest_points, epsilon)
+            })
+            .sum()
+    }
     fn integrate_mapped(
         &self,
         ys: &[f64],
@@ -143,6 +160,21 @@ impl Integrator for SubIntegrators {
             .iter()
             .map(|(range, integrator)| {
                 integrator.integrate_mapped(&ys[range.clone()], map, epsilon)
+            })
+            .sum()
+    }
+
+    fn integrate_mapped_interest_points(
+        &self,
+        ys: &[f64],
+        map: &(dyn Fn(&[f64], &mut [f64]) + Send + Sync),
+        interest_points: &[f64],
+        epsilon: f64,
+    ) -> f64 {
+        self.partial
+            .iter()
+            .map(|(range, integrator)| {
+                integrator.integrate_mapped_interest_points(&ys[range.clone()], map, interest_points, epsilon)
             })
             .sum()
     }

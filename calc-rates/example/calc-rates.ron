@@ -207,7 +207,7 @@
         LogSequence(
             start: 1e+3,
             end: 1e+6,
-            n: 300,
+            n: 40,
         ),
     ],
     temperature_units: Kelvin,
