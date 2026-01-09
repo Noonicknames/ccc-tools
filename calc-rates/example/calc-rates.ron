@@ -1,7 +1,7 @@
 (
     result_sets: [
         (
-            name: "t2P<-s2S(g,n=16(bound))",
+            name: "t2P-s2S(g,n=16(bound))",
             source: "./test_out/g,n=16(bound)/ics.t2P.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -15,7 +15,7 @@
             )),
         ),
         (
-            name: "t2P<-s2S(f,n=14(full))",
+            name: "t2P-s2S(f,n=14(full))",
             source: "./test_out/f,n=14(full)/ics.t2P.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -30,7 +30,7 @@
         ),
 
         (
-            name: "s5S<-s2S(g,n=16(bound))",
+            name: "s5S-s2S(g,n=16(bound))",
             source: "./test_out/g,n=16(bound)/ics.s5S.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -44,7 +44,7 @@
             )),
         ),
         (
-            name: "s5S<-s2S(f,n=14(full))",
+            name: "s5S-s2S(f,n=14(full))",
             source: "./test_out/f,n=14(full)/ics.s5S.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -59,7 +59,7 @@
         ),
 
         (
-            name: "s3D<-s2S(g,n=16(bound))",
+            name: "s3D-s2S(g,n=16(bound))",
             source: "./test_out/g,n=16(bound)/ics.s3D.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -73,7 +73,7 @@
             )),
         ),
         (
-            name: "s3D<-s2S(f,n=14(full))",
+            name: "s3D-s2S(f,n=14(full))",
             source: "./test_out/f,n=14(full)/ics.s3D.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -88,7 +88,7 @@
         ),
 
         (
-            name: "s4D<-s2S(g,n=16(bound))",
+            name: "s4D-s2S(g,n=16(bound))",
             source: "./test_out/g,n=16(bound)/ics.s4D.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -102,7 +102,7 @@
             )),
         ),
         (
-            name: "s4D<-s2S(f,n=14(full))",
+            name: "s4D-s2S(f,n=14(full))",
             source: "./test_out/f,n=14(full)/ics.s4D.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -117,7 +117,7 @@
         ),
 
         (
-            name: "s5D<-s2S(g,n=16(bound))",
+            name: "s5D-s2S(g,n=16(bound))",
             source: "./test_out/g,n=16(bound)/ics.s5D.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -131,7 +131,7 @@
             )),
         ),
         (
-            name: "s5D<-s2S(f,n=14(full))",
+            name: "s5D-s2S(f,n=14(full))",
             source: "./test_out/f,n=14(full)/ics.s5D.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -146,7 +146,7 @@
         ),
 
         (
-            name: "t3D<-s2S(g,n=16(bound))",
+            name: "t3D-s2S(g,n=16(bound))",
             source: "./test_out/g,n=16(bound)/ics.t3D.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -160,7 +160,7 @@
             )),
         ),
         (
-            name: "t3D<-s2S(f,n=14(full))",
+            name: "t3D-s2S(f,n=14(full))",
             source: "./test_out/f,n=14(full)/ics.t3D.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -175,7 +175,7 @@
         ),
 
         (
-            name: "t4F<-s2S(g,n=16(bound))",
+            name: "t4F-s2S(g,n=16(bound))",
             source: "./test_out/g,n=16(bound)/ics.t4F.s2S",
             grid: [
                 MonotoneCubic(".."),
@@ -189,7 +189,7 @@
             )),
         ),
         (
-            name: "t4F<-s2S(f,n=14(full))",
+            name: "t4F-s2S(f,n=14(full))",
             source: "./test_out/f,n=14(full)/ics.t4F.s2S",
             grid: [
                 MonotoneCubic(".."),

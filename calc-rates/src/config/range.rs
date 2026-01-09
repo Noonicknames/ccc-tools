@@ -12,10 +12,10 @@ use serde::{Deserialize, Serialize, de::Visitor};
 /// Due to constraints of serde, ranges are serialised as strings like `"1..3"` or `"1..=2"` with quotation marks whilst counts are serialised as integers.
 /// 
 /// # Supported Variants
-/// - Exclusive ranges, excludes the end, e.g. "0..3"
-/// - Inclusive ranges, includes the end, e.g. "0..=2"
-/// - Unbounded or full ranges, includes all, ".."
-/// - Unbounded on one side, e.g. "0.." or "..10"
+/// - Exclusive ranges, excludes the end, e.g. `"0..3"`
+/// - Inclusive ranges, includes the end, e.g. `"0..=2"`
+/// - Unbounded or full ranges, includes all, `".."`
+/// - Unbounded on one side, e.g. `"0.."` or `"..10"`
 ///
 /// # Example
 /// ```

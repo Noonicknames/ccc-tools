@@ -203,18 +203,36 @@ async fn process_result_set(
     let cs_vec = Arc::new(cs_vec);
     let energy_vec = Arc::new(energy_vec);
 
-    let blas_lib = BlasLib::new().unwrap();
-    let lapacke_lib = LapackeLib::new(&blas_lib).unwrap();
+    let blas_lib = match BlasLib::new() {
+        Ok(blas_lib) => Some(blas_lib),
+        Err(err) => {
+            diagnostics.write_log_background(
+                warn!("Failed to get BLAS lib").with_sublog(error!("{}", err)),
+            );
+            None
+        }
+    };
+
+    let lapacke_lib = match blas_lib.as_ref().map(|blas_lib| LapackeLib::new(blas_lib)) {
+        Some(Ok(lapacke_lib)) => Some(lapacke_lib),
+        Some(Err(err)) => {
+            diagnostics.write_log_background(
+                warn!("Failed to get BLAS lib").with_sublog(error!("{}", err)),
+            );
+            None
+        }
+        None => None,
+    };
 
     let integrator = integration_grid_to_points(&grid, energy_vec.len())
         .into_iter()
-        .map(|(kind, range)| match kind {
-            IntegrationKind::MonotoneCubic => (
+        .map(|(kind, range)| match (&lapacke_lib, kind) {
+            (_, IntegrationKind::MonotoneCubic) => (
                 range.clone(),
                 Box::new(MonotoneCubicIntegrator::new(&energy_vec[range]))
                     as Box<dyn Integrator + Sync + Send>,
             ),
-            IntegrationKind::AutoGauss => {
+            (_, IntegrationKind::AutoGauss) => {
                 let integrand = energy_vec
                     .iter()
                     .zip(cs_vec.iter())
@@ -230,14 +248,24 @@ async fn process_result_set(
                     )) as Box<dyn Integrator + Sync + Send>,
                 )
             }
-            IntegrationKind::NaturalCubic => (
+            (Some(lapacke_lib), IntegrationKind::NaturalCubic) => (
                 range.clone(),
                 Box::new(NaturalCubicIntegrator::new(
                     &energy_vec[range],
                     lapacke_lib.functions_static(),
                 )) as Box<dyn Integrator + Sync + Send>,
             ),
-            IntegrationKind::Gauss => (
+            (None, IntegrationKind::NaturalCubic) => {
+                diagnostics.write_log_background(warn!(
+                    "Falling back to monotone cubic since LAPACKE was not available."
+                ));
+                (
+                    range.clone(),
+                    Box::new(MonotoneCubicIntegrator::new(&energy_vec[range]))
+                        as Box<dyn Integrator + Sync + Send>,
+                )
+            }
+            (_, IntegrationKind::Gauss) => (
                 range.clone(),
                 Box::new(GaussIntegrator::new(&energy_vec[range]))
                     as Box<dyn Integrator + Sync + Send>,
