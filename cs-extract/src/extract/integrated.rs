@@ -8,19 +8,22 @@ use diagnostics::{
     error,
 };
 use futures::{
-    pin_mut,
+    StreamExt, pin_mut,
     stream::{BoxStream, FuturesUnordered},
-    StreamExt,
 };
 use state_parse::r#async::{
-    compose::{self, AsyncSectionParserBuilder},
     AsyncParseSource, AsyncParser, DefaultAsyncParserConfig, SourceInfo,
+    compose::{self, AsyncSectionParserBuilder},
 };
 
 use crate::{
     config::Units,
     extract::{
-        TransitionsSet, integrated::parsers::{IntegratedCsContext, IntegratedCsState, ParseEnergyUnits, ParseIonCs, ParseSingleCs}
+        TransitionsSet,
+        integrated::parsers::{
+            IntegratedCsContext, IntegratedCsState, ParseBornCs, ParseEnergyUnits, ParseIonCs,
+            ParseSingleCs,
+        },
     },
     results::{CsResults, SingleEnergyResults},
     util::FilesSource,
@@ -30,120 +33,111 @@ use super::ExtractResultsError;
 
 mod parsers;
 
-// /// Get results from a single partial wave.
-// pub async fn get_born_results(
-//     config_dir: impl AsRef<Path>,
-//     source: &FilesSource,
-//     transitions_set: &Arc<TransitionsSet>,
-//     units: Units,
-//     partial: bool,
-//     diagnostics: &Arc<AsyncDiagnostics>,
-// ) -> Result<CsResults, ExtractResultsError> {
-//     let totalcs_files = totalcs_files(config_dir, &source, diagnostics).await;
-//     pin_mut!(totalcs_files);
+/// Get results from a single partial wave.
+pub async fn get_born_results(
+    config_dir: impl AsRef<Path>,
+    source: &FilesSource,
+    transitions_set: &Arc<TransitionsSet>,
+    units: Units,
+    partial: bool,
+    diagnostics: &Arc<AsyncDiagnostics>,
+) -> Result<CsResults, ExtractResultsError> {
+    let totalcs_files = totalcs_files(config_dir, &source, diagnostics).await;
+    pin_mut!(totalcs_files);
 
-//     let mut results = CsResults::empty();
-//     let mut tasks = FuturesUnordered::new();
+    let mut results = CsResults::empty();
+    let mut tasks = FuturesUnordered::new();
 
-//     let integratedcs_context = Arc::new(IntegratedCsContext {
-//         extrapolated,
-//         units,
-//         transitions_set: Arc::clone(transitions_set),
-//     });
+    let integratedcs_context = Arc::new(IntegratedCsContext {
+        partial,
+        extrapolated: Default::default(), // Unused for extracting born cross sections.
+        units,
+        transitions_set: Arc::clone(transitions_set),
+    });
 
-//     let parser = {
-//         let mut parser = AsyncParser::empty(DefaultAsyncParserConfig::new());
-//         parser.add_section(ParseEnergyUnits);
+    let parser = {
+        let mut parser = AsyncParser::empty(DefaultAsyncParserConfig::new());
+        parser.add_section(
+            ParseEnergyUnits
+                .map_context(|_ctx: &(Arc<IntegratedCsContext>, Arc<AsyncDiagnostics>)| &())
+                .map_output(|output: &mut SingleEnergyResults| &mut output.energy)
+                .map_state(|state: &mut IntegratedCsState| &mut state.units_from),
+        );
+        parser.add_section(ParseBornCs);
 
-//         let parse_cs = {
-//             let mut repeat = compose::RepeatConsume::empty(|_repeat_err| Ok(()));
+        Arc::new(parser)
+    };
 
-//             if !transitions_set.ion.is_empty() {
-//                 repeat.add_section(ParseIonCs);
-//             }
+    while let Some(totalcs_path) = totalcs_files.next().await {
+        let parser = Arc::clone(&parser);
+        let context = (Arc::clone(&integratedcs_context), Arc::clone(diagnostics));
 
-//             if !transitions_set.single.is_empty() {
-//                 repeat.add_section(ParseSingleCs);
-//             }
+        tasks.push(tokio::spawn(async move {
+            let file = match tokio::fs::OpenOptions::new()
+                .read(true)
+                .open(&totalcs_path)
+                .await
+            {
+                Ok(file) => file,
+                Err(err) => {
+                    return Err(ExtractResultsError::FailedOpenFile {
+                        file_path: totalcs_path.display().to_string(),
+                        err,
+                    });
+                }
+            };
 
-//             repeat
-//         };
+            let source = AsyncParseSource::new(
+                tokio::io::BufReader::new(file),
+                SourceInfo {
+                    file_path: Some(totalcs_path.display().to_string()),
+                },
+            );
+            pin_mut!(source);
 
-//         parser.add_section(parse_cs);
+            // bench_time!("parse_file", {
+            parser.parse_default(&context, source).await
+            // })
+        }));
 
-//         Arc::new(parser)
-//     };
+        // // Backpressure
+        // // This is probably not needed, only for extremely large results that I somehow hit a memory limit.
+        // const MAX_CONCURRENCY: usize = 8;
+        // if tasks.len() >= MAX_CONCURRENCY {
+        //     match tasks.next().await.unwrap() {
+        //         Ok(Ok(single_energy_result)) => {
+        //             results.push_single_energy_results(&single_energy_result)
+        //         }
+        //         Ok(Err(err)) => {
+        //             diagnostics.write_log_background(err.to_log());
+        //         }
+        //         Err(err) => {
+        //             diagnostics.write_log_background(
+        //                 error!("Failed to join task").with_sublog(error!("{}", err)),
+        //             );
+        //         }
+        //     }
+        // }
+    }
 
-//     while let Some(totalcs_path) = totalcs_files.next().await {
-//         let parser = Arc::clone(&parser);
-//         let context = (Arc::clone(&integratedcs_context), Arc::clone(diagnostics));
+    while let Some(result) = tasks.next().await {
+        match result {
+            Ok(Ok(single_energy_result)) => {
+                results.push_single_energy_results(&single_energy_result)
+            }
+            Ok(Err(err)) => {
+                diagnostics.write_log_background(err.to_log());
+            }
+            Err(err) => {
+                diagnostics.write_log_background(
+                    error!("Failed to join task").with_sublog(error!("{}", err)),
+                );
+            }
+        }
+    }
 
-//         tasks.push(tokio::spawn(async move {
-//             let file = match tokio::fs::OpenOptions::new()
-//                 .read(true)
-//                 .open(&totalcs_path)
-//                 .await
-//             {
-//                 Ok(file) => file,
-//                 Err(err) => {
-//                     return Err(ExtractResultsError::FailedOpenFile {
-//                         file_path: totalcs_path.display().to_string(),
-//                         err,
-//                     });
-//                 }
-//             };
-
-//             let source = AsyncParseSource::new(
-//                 tokio::io::BufReader::new(file),
-//                 SourceInfo {
-//                     file_path: Some(totalcs_path.display().to_string()),
-//                 },
-//             );
-//             pin_mut!(source);
-
-//             // bench_time!("parse_file", {
-//             parser.parse_default(&context, source).await
-//             // })
-//         }));
-
-//         // // Backpressure
-//         // // This is probably not needed, only for extremely large results that I somehow hit a memory limit.
-//         // const MAX_CONCURRENCY: usize = 8;
-//         // if tasks.len() >= MAX_CONCURRENCY {
-//         //     match tasks.next().await.unwrap() {
-//         //         Ok(Ok(single_energy_result)) => {
-//         //             results.push_single_energy_results(&single_energy_result)
-//         //         }
-//         //         Ok(Err(err)) => {
-//         //             diagnostics.write_log_background(err.to_log());
-//         //         }
-//         //         Err(err) => {
-//         //             diagnostics.write_log_background(
-//         //                 error!("Failed to join task").with_sublog(error!("{}", err)),
-//         //             );
-//         //         }
-//         //     }
-//         // }
-//     }
-
-//     while let Some(result) = tasks.next().await {
-//         match result {
-//             Ok(Ok(single_energy_result)) => {
-//                 results.push_single_energy_results(&single_energy_result)
-//             }
-//             Ok(Err(err)) => {
-//                 diagnostics.write_log_background(err.to_log());
-//             }
-//             Err(err) => {
-//                 diagnostics.write_log_background(
-//                     error!("Failed to join task").with_sublog(error!("{}", err)),
-//                 );
-//             }
-//         }
-//     }
-
-//     Ok(results)
-// }
+    Ok(results)
+}
 
 /// Get results from a single partial wave.
 pub async fn get_integrated_results(
@@ -161,6 +155,7 @@ pub async fn get_integrated_results(
     let mut tasks = FuturesUnordered::new();
 
     let integratedcs_context = Arc::new(IntegratedCsContext {
+        partial: Default::default(),
         extrapolated,
         units,
         transitions_set: Arc::clone(transitions_set),

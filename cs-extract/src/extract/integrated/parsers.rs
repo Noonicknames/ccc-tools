@@ -1,12 +1,13 @@
 use std::{collections::HashMap, future::Future, num::ParseFloatError, sync::Arc};
 
 use diagnostics::{
+    Log, LogComponent,
     components::snippet::{
         Footer, FooterKind, LineHighlight, LineHighlightTheme, Snippet, SnippetChunk, SnippetLine,
         SnippetLineKind,
     },
     diagnostics::AsyncDiagnostics,
-    error, info, warn, Log, LogComponent,
+    error, info, warn,
 };
 use state_parse::r#async::{AsyncParseSource, AsyncSectionParser, SourceInfo};
 use tokio::io::AsyncBufRead;
@@ -22,7 +23,11 @@ use crate::{
 pub struct IntegratedCsContext {
     pub units: Units,
     pub transitions_set: Arc<TransitionsSet>,
+
+    /// Parameter used when extracting close-coupling cross sections, unused otherwise.
     pub extrapolated: bool,
+    /// Parameter used when extracting born cross sections, unused otherwise.
+    pub partial: bool,
 }
 
 #[derive(Default)]
@@ -73,7 +78,7 @@ where
                         line,
                         line_num: source.current_line_num(),
                         context: "Expected more whitespace separated columns".to_owned(),
-                    })
+                    });
                 }
             };
 
@@ -89,7 +94,7 @@ where
                         failed_units_str: units_str.to_owned(),
                         line,
                         line_num: source.current_line_num(),
-                    })
+                    });
                 }
             };
 
@@ -107,7 +112,7 @@ where
                         line,
                         line_num: source.current_line_num(),
                         context: "Expected more whitespace separated columns".to_owned(),
-                    })
+                    });
                 }
             };
 
@@ -124,7 +129,7 @@ where
                         line,
                         line_num: source.current_line_num(),
                         err,
-                    })
+                    });
                 }
             };
 
@@ -177,7 +182,7 @@ where
 
     fn parse_section<'s>(
         &'s self,
-        (context, diagnostics): &'s Self::Context,
+        full_context @ (context, diagnostics): &'s Self::Context,
         state: &'s mut Self::State,
         mut source: std::pin::Pin<&'s mut AsyncParseSource<R>>,
         output: &'s mut Self::Output,
@@ -187,6 +192,29 @@ where
 
             let mut transitions_order_counter = HashMap::new();
             let mut extracted_count = 0;
+            // We should be on the header line currently...
+            match source.next().await? {
+                Some(line) => {
+                    assert!(<Self as AsyncSectionParser<R>>::can_start_parse(
+                        self,
+                        full_context,
+                        state,
+                        &line
+                    ));
+                }
+                None => {
+                    return Err(ExtractResultsError::UnexpectedEndOfFile {
+                        file_path: source
+                            .info()
+                            .file_path
+                            .as_ref()
+                            .cloned()
+                            .unwrap_or_default(),
+                        line_num: source.current_line_num(),
+                    });
+                }
+            }
+
             loop {
                 match source.peek().await {
                     Ok(Some(line)) => {
@@ -256,7 +284,9 @@ where
                     continue;
                 };
 
-                let Some(mut transition) = SingleTransition::new(to, from.trim_start_matches("<-")).ok() else {
+                let Some(mut transition) =
+                    SingleTransition::new(to, from.trim_start_matches("<-")).ok()
+                else {
                     diagnostics.write_log_background(
                         error!("Invalid transition").with_component(LogComponent::Snippet(
                             Snippet::empty(Some(
@@ -560,7 +590,9 @@ where
 
             // Just find end of section now
             while let Some(line) = source.next().await? {
-                if line == "-------------------------------------------------------------------------------" {
+                if line
+                    == "-------------------------------------------------------------------------------"
+                {
                     break;
                 }
             }

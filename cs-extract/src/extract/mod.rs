@@ -8,21 +8,25 @@ use std::{
 
 use colored::Colorize;
 use diagnostics::{
+    Log, LogComponent,
     components::snippet::{
         LineHighlight, LineHighlightTheme, Snippet, SnippetChunk, SnippetLine, SnippetLineKind,
     },
     diagnostics::AsyncDiagnostics,
-    error, info, warn, Log, LogComponent,
+    error, info, warn,
 };
 
-use futures::{stream::FuturesUnordered, StreamExt};
+use futures::{StreamExt, stream::FuturesUnordered};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::{
     bench_time,
-    config::{Config, ConfigSerde, CsKind, ResultSet, SingleState, SingleTransition, State, Transition, Units},
+    config::{
+        Config, ConfigSerde, CsKind, ResultSet, SingleState, SingleTransition, State, Transition,
+        Units,
+    },
     extract::{
-        integrated::get_integrated_results,
+        integrated::{get_born_results, get_integrated_results},
         partial::get_partial_results,
         state_info::{ExtractStateInfoError, get_state_info},
     },
@@ -72,7 +76,11 @@ impl ExtractCmdError {
                             err.span.start.line,
                             LineHighlight::new(
                                 err.span.start.col - 1,
-                                err.span.end.col.checked_sub(err.span.start.col).unwrap_or(1),
+                                err.span
+                                    .end
+                                    .col
+                                    .checked_sub(err.span.start.col)
+                                    .unwrap_or(1),
                                 err.to_string(),
                                 LineHighlightTheme::ERROR,
                             ),
@@ -118,26 +126,28 @@ async fn get_config(file_path: impl AsRef<Path>) -> Result<Config, ExtractCmdErr
                 err,
             })?;
 
-        Ok(ron::from_str::<ConfigSerde>(&buf).map(|config| config.to_config()).map_err(|err| {
-            let mut buf_lines = buf.lines();
-            let start_line = err.span.start.line.checked_sub(1).unwrap_or(0);
-            for _ in 0..start_line - 1 {
-                buf_lines.next();
-            }
-            let mut lines = String::new();
-            for _ in 0..3 {
-                if let Some(line) = buf_lines.next() {
-                    lines.push_str(line);
-                    lines.push('\n');
+        Ok(ron::from_str::<ConfigSerde>(&buf)
+            .map(|config| config.to_config())
+            .map_err(|err| {
+                let mut buf_lines = buf.lines();
+                let start_line = err.span.start.line.checked_sub(1).unwrap_or(0);
+                for _ in 0..start_line - 1 {
+                    buf_lines.next();
                 }
-            }
-            ExtractCmdError::ConfigParse {
-                file_path: file_path.as_ref().display().to_string(),
-                start_line,
-                lines,
-                err,
-            }
-        })?)
+                let mut lines = String::new();
+                for _ in 0..3 {
+                    if let Some(line) = buf_lines.next() {
+                        lines.push_str(line);
+                        lines.push('\n');
+                    }
+                }
+                ExtractCmdError::ConfigParse {
+                    file_path: file_path.as_ref().display().to_string(),
+                    start_line,
+                    lines,
+                    err,
+                }
+            })?)
     }
 }
 
@@ -278,7 +288,8 @@ impl FromIterator<Transition> for TransitionsSet {
     fn from_iter<T: IntoIterator<Item = Transition>>(iter: T) -> Self {
         let mut this = Self::empty();
 
-        iter.into_iter().for_each(|transition| this.insert(transition));
+        iter.into_iter()
+            .for_each(|transition| this.insert(transition));
 
         this
     }
@@ -303,7 +314,9 @@ impl TransitionsSet {
                 to: State::Single(to),
                 from: State::Single(from),
             } => self.single.insert(SingleTransition { to, from }),
-            _ => unimplemented!(),
+            _ => unimplemented!(
+                "Only transitions from single-ionised or, single-single are supported."
+            ),
         };
     }
     pub fn iter(&self) -> impl Iterator<Item = Transition> + '_ {
@@ -356,13 +369,7 @@ async fn prepare_result_sets(
         join_handles.push((
             result_set.name.clone(),
             tokio::spawn(async move {
-                prepare_single_result_set(
-                    root_dir,
-                    output_folder,
-                    result_set,
-                    &diagnostics,
-                )
-                .await
+                prepare_single_result_set(root_dir, output_folder, result_set, &diagnostics).await
             }),
         ));
     }
@@ -422,7 +429,7 @@ async fn prepare_single_result_set(
             err,
         });
     };
-    
+
     let mut results = bench_time!("get_results", {
         get_results(
             root_dir,
@@ -437,7 +444,6 @@ async fn prepare_single_result_set(
     })?;
     // Always sort for now.
     results.sort();
-
 
     // Log any results sets which had no cross-sections
     for transition in transitions.iter() {
@@ -544,9 +550,14 @@ async fn get_results(
     diagnostics: &Arc<AsyncDiagnostics>,
 ) -> Result<CsResults, ExtractResultsError> {
     let mut results = match cs_kind {
-        CsKind::Born { partial } => {
-            todo!();
-        }
+        CsKind::Born { partial } => get_born_results(
+            root_dir.as_ref(),
+            source,
+            transitions_set,
+            units,
+            partial,
+            diagnostics,
+        ).await,
         CsKind::Integrated { extrapolated } => {
             get_integrated_results(
                 root_dir.as_ref(),

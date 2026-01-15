@@ -20,6 +20,13 @@
             source: Folder("./full_run"),
         ),
         (
+            name: "full_run_born",
+            source: Folder("./full_run"),
+            cs_kind: Some(Born(
+                partial: false,
+            )),
+        ),
+        (
             name: "single",
             source: Folder("./single"),
         ),
