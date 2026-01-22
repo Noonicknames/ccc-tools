@@ -12,6 +12,12 @@ pub trait Interpolation: Send + Sync {
             contained_points: (usize, usize),
         }
 
+        impl std::fmt::Display for NodeData {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                writeln!(f, "({}-{})", self.range.0, self.range.1)
+            }
+        }
+
         impl NodeData {
             pub fn contained_points_len(&self) -> usize {
                 self.contained_points.1 - self.contained_points.0
@@ -118,7 +124,7 @@ pub trait Interpolation: Send + Sync {
 
         sum
     }
-    fn integral(&self, epsilon: f64) -> f64 {
+    fn integral(&self, mut epsilon: f64) -> f64 {
         let interpolate_range = self.interpolate_range();
 
         let mut intervals = 4;
@@ -130,11 +136,19 @@ pub trait Interpolation: Send + Sync {
 
         let mut ys_buf = vec![0.0; xs.len()];
 
+        let max_abs_y;
+
         let mut prev_answer = {
             let step = (interpolate_range.end() - interpolate_range.start()) / intervals as f64;
             let ys = self
                 .interpolate(&xs, &mut ys_buf)
                 .expect("All xs were within the interpolation range, should not error.");
+            max_abs_y = ys
+                .iter()
+                .cloned()
+                .map(|y| y.abs())
+                .max_by(f64::total_cmp)
+                .unwrap_or(0.0);
 
             let mut result = 0.0;
 
@@ -151,6 +165,11 @@ pub trait Interpolation: Send + Sync {
 
             result
         };
+
+        // Enforce a minimum error so it doesn't loop forever
+        epsilon = epsilon.max(
+            32.0 * max_abs_y * (interpolate_range.end() - interpolate_range.start()) * f64::EPSILON,
+        );
 
         loop {
             let new_xs = Vec::from_iter((0..intervals).map(|i| {
