@@ -136,7 +136,7 @@ pub trait Interpolation: Send + Sync {
 
         let mut ys_buf = vec![0.0; xs.len()];
 
-        let max_abs_y;
+        let mut max_abs_y;
 
         let mut prev_answer = {
             let step = (interpolate_range.end() - interpolate_range.start()) / intervals as f64;
@@ -167,9 +167,7 @@ pub trait Interpolation: Send + Sync {
         };
 
         // Enforce a minimum error so it doesn't loop forever
-        epsilon = epsilon.max(
-            32.0 * max_abs_y * (interpolate_range.end() - interpolate_range.start()) * f64::EPSILON,
-        );
+        epsilon = epsilon.max(max_abs_y * 2e-10);
 
         loop {
             let new_xs = Vec::from_iter((0..intervals).map(|i| {
@@ -184,6 +182,17 @@ pub trait Interpolation: Send + Sync {
             let new_ys = self
                 .interpolate(&new_xs, &mut new_ys_buf)
                 .expect("All xs were within interpolation range, should not error.");
+
+            max_abs_y = new_ys
+                .iter()
+                .cloned()
+                .map(|y| y.abs())
+                .max_by(f64::total_cmp)
+                .unwrap_or(0.0)
+                .max(max_abs_y);
+
+            // Enforce a minimum error so it doesn't loop forever
+            epsilon = epsilon.max(max_abs_y * 1e-10);
 
             assert_eq!(ys_buf.len(), new_ys.len() + 1);
 
@@ -211,6 +220,15 @@ pub trait Interpolation: Send + Sync {
 
                 result
             };
+
+            // println!(
+            //     "Range: {:.3e}-{:.3e}, Difference: {:.3e}, epsilon: {:.3e}, yabs_max: {:.3e}",
+            //     interpolate_range.start(),
+            //     interpolate_range.end(),
+            //     current_answer - prev_answer,
+            //     epsilon,
+            //     max_abs_y
+            // );
             if (current_answer - prev_answer).abs() < epsilon {
                 break current_answer;
             } else {

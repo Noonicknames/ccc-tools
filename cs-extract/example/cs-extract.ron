@@ -1,42 +1,46 @@
 (
     result_sets: [
+        // (
+        //     name: "bound-states-3-poisoned",
+        //     source: Folder("./bound_states_3_poisoned"),
+        // ),
+        // (
+        //     name: "bound-states-3",
+        //     source: Folder("./bound_states_3"),
+        //     // Individually specified is possible.
+        //     cs_kind: Some(
+        //         Partial ( 
+        //             column: CrossSection, 
+        //             partial_wave: 0 
+        //         )
+        //     ),
+        // ),
+        // (
+        //     name: "full_run",
+        //     source: Folder("./full_run"),
+        // ),
+        // (
+        //     name: "full_run_born",
+        //     source: Folder("./full_run"),
+        //     cs_kind: Some(Born(
+        //         partial: false,
+        //     )),
+        // ),
+        // (
+        //     name: "single",
+        //     source: Folder("./single"),
+        // ),
+        // (
+        //     name: "full_run_halves",
+        //     source: Folders(["./lower_half_full_run", "./upper_half_full_run"]),
+        // ),
+        // (
+        //     name: "alpha-latop-3-metastable-smaller-kgrid",
+        //     source: Folder("./alpha-latop-3-metastable-smaller-kgrid"),
+        // ),
         (
-            name: "bound-states-3-poisoned",
-            source: Folder("./bound_states_3_poisoned"),
-        ),
-        (
-            name: "bound-states-3",
-            source: Folder("./bound_states_3"),
-            // Individually specified is possible.
-            cs_kind: Some(
-                Partial ( 
-                    column: CrossSection, 
-                    partial_wave: 0 
-                )
-            ),
-        ),
-        (
-            name: "full_run",
-            source: Folder("./full_run"),
-        ),
-        (
-            name: "full_run_born",
-            source: Folder("./full_run"),
-            cs_kind: Some(Born(
-                partial: false,
-            )),
-        ),
-        (
-            name: "single",
-            source: Folder("./single"),
-        ),
-        (
-            name: "full_run_halves",
-            source: Folders(["./lower_half_full_run", "./upper_half_full_run"]),
-        ),
-        (
-            name: "alpha-latop-3-metastable-smaller-kgrid",
-            source: Folder("./alpha-latop-3-metastable-smaller-kgrid"),
+            name: "single-metastable",
+            source: Folder("./single-metastable"),
         ),
     ],
     cs_kind: 

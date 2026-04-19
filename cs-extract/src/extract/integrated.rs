@@ -59,7 +59,6 @@ pub async fn get_born_results(
         let mut parser = AsyncParser::empty(DefaultAsyncParserConfig::new());
         parser.add_section(
             ParseEnergyUnits
-                .map_context(|_ctx: &(Arc<IntegratedCsContext>, Arc<AsyncDiagnostics>)| &())
                 .map_output(|output: &mut SingleEnergyResults| &mut output.energy)
                 .map_state(|state: &mut IntegratedCsState| &mut state.units_from),
         );
@@ -165,7 +164,6 @@ pub async fn get_integrated_results(
         let mut parser = AsyncParser::empty(DefaultAsyncParserConfig::new());
         parser.add_section(
             ParseEnergyUnits
-                .map_context(|_ctx: &(Arc<IntegratedCsContext>, Arc<AsyncDiagnostics>)| &())
                 .map_output(|output: &mut SingleEnergyResults| &mut output.energy)
                 .map_state(|state: &mut IntegratedCsState| &mut state.units_from),
         );

@@ -41,9 +41,9 @@ impl<R> AsyncSectionParser<R> for ParseEnergyUnits
 where
     R: AsyncBufRead + Send,
 {
-    type Context = ();
+    type Context = (Arc<IntegratedCsContext>, Arc<AsyncDiagnostics>);
     type Error = ExtractResultsError;
-    type Output = f64;
+    type Output = HashMap<SingleState, f64>;
     type State = Option<Units>;
     fn can_start_parse(
         &self,
@@ -55,13 +55,13 @@ where
     }
     fn parse_section<'s>(
         &'s self,
-        _context: &'s Self::Context,
+        (_, diagnostics): &'s Self::Context,
         state: &'s mut Self::State,
         mut source: std::pin::Pin<&'s mut AsyncParseSource<R>>,
         output: &'s mut Self::Output,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send + 's {
         // Example line:
-        //    0 866   1 Units: a0^2     electron - B II    1.0000E+02 eV on s2S
+        //   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P
         async move {
             let line = source.next().await.unwrap().unwrap(); // Should be guaranteed by can_start_parse
             let mut columns = line.split_ascii_whitespace();
@@ -100,40 +100,109 @@ where
 
             *state = Some(units);
 
-            let energy_str: &str = match columns.nth(4) {
-                Some(energy_str) => energy_str,
-                None => {
-                    return Err(ExtractResultsError::InvalidLine {
-                        file_path: source
-                            .info()
-                            .file_path
-                            .clone()
-                            .unwrap_or_else(|| "<unknown>".to_owned()),
-                        line,
-                        line_num: source.current_line_num(),
-                        context: "Expected more whitespace separated columns".to_owned(),
-                    });
-                }
-            };
+            if let None = columns.nth(3) {
+                return Err(ExtractResultsError::InvalidLine {
+                    file_path: source
+                        .info()
+                        .file_path
+                        .clone()
+                        .unwrap_or_else(|| "<unknown>".to_owned()),
+                    line,
+                    line_num: source.current_line_num(),
+                    context: "Expected more whitespace separated columns".to_owned(),
+                });
+            }
 
-            let energy = match energy_str.parse::<f64>() {
-                Ok(energy) => energy,
-                Err(err) => {
-                    return Err(ExtractResultsError::ParseEnergy {
-                        file_path: source
-                            .info()
-                            .file_path
-                            .clone()
-                            .unwrap_or_else(|| "<unknown>".to_owned()),
-                        failed_energy_str: energy_str.to_owned(),
-                        line,
-                        line_num: source.current_line_num(),
-                        err,
-                    });
-                }
-            };
+            loop {
+                let Some(energy_str) = columns.next() else {
+                    break;
+                };
 
-            *output = energy;
+                let energy = match energy_str.parse::<f64>() {
+                    Ok(energy) => energy,
+                    Err(err) => {
+                        diagnostics.write_log_background(
+                        warn!("Invalid energy")
+                            .with_component(LogComponent::Snippet(
+                                Snippet::empty(source.info().file_path.clone()).with_chunk(
+                                    SnippetChunk::empty(source.current_line_num()).with_line(
+                                        SnippetLine::new(line.clone(), SnippetLineKind::Normal)
+                                            .with_highlight_auto(energy_str, err.to_string(), LineHighlightTheme::ERROR),
+                                    ))
+                                .with_footer(Footer::new(
+                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(), 
+                                    FooterKind::Note
+                                ))
+                            ))
+                        );
+                        break;
+                    }
+                };
+
+                let Some(state_str) = columns.nth(2) else {
+                    diagnostics.write_log_background(warn!("Expected state").with_component(
+                        LogComponent::Snippet(
+                            Snippet::empty(source.info().file_path.clone()).with_chunk(
+                                SnippetChunk::empty(source.current_line_num()).with_line(
+                                    SnippetLine::new_with_highlight(
+                                        line.clone(),
+                                        SnippetLineKind::Normal,
+                                        Some(LineHighlight::new(
+                                            line.len(),
+                                            2,
+                                            "Expected \"on <state>\" to follow energy".to_owned(),
+                                            LineHighlightTheme::INFO,
+                                        )),
+                                    ),
+                                ),
+                            ).with_footer(Footer::new(
+                                "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(), 
+                                FooterKind::Note
+                            )),
+                        ),
+                    ));
+                    break;
+                };
+
+                let state = match SingleState::from_str(state_str) {
+                    Ok(state) => state,
+                    Err(err) => {
+                        diagnostics.write_log_background(
+                        warn!("Invalid state")
+                            .with_component(LogComponent::Snippet(
+                                Snippet::empty(source.info().file_path.clone()).with_chunk(
+                                    SnippetChunk::empty(source.current_line_num()).with_line(
+                                        SnippetLine::new(line.clone(), SnippetLineKind::Normal)
+                                            .with_highlight_auto(energy_str, err, LineHighlightTheme::ERROR),
+                                    ))
+                                .with_footer(Footer::new(
+                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(), 
+                                    FooterKind::Note
+                                ))
+                            ))
+                        );
+                        break;
+                    }
+                };
+
+                if let Some(state) = output.insert(state, energy) {
+                    diagnostics.write_log_background(
+                        warn!("Incident energy for duplicate initial state `{}`, previous energy `{}`.", state, energy)
+                            .with_component(LogComponent::Snippet(
+                                Snippet::empty(source.info().file_path.clone()).with_chunk(
+                                    SnippetChunk::empty(source.current_line_num()).with_line(
+                                        SnippetLine::new(line.clone(), SnippetLineKind::Normal)
+                                            .with_highlight_auto(state_str, "Duplicate initial state".to_owned(), LineHighlightTheme::ERROR),
+                                    ))
+                                .with_footer(Footer::new(
+                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(), 
+                                    FooterKind::Note
+                                ))
+                            ))
+                    );
+                }
+            }
+
             Ok(())
         }
     }

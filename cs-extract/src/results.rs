@@ -34,10 +34,10 @@ impl CsResults {
     }
     pub fn push_single_energy_results(&mut self, results: &SingleEnergyResults) {
         results.cross_sections.iter().for_each(|(transition, cs)| {
-            self.push_single_result(transition, (results.energy, *cs));
+            self.push_single_result(transition, (*results.energy.get(&transition.from).unwrap(), *cs));
         });
         results.to_ion_cross_sections.iter().for_each(|(from, cs)| {
-            self.push_to_ion_result(from, (results.energy, *cs));
+            self.push_to_ion_result(from, (*results.energy.get(from).unwrap(), *cs));
         });
     }
     pub fn push_single_result(&mut self, transition: &SingleTransition, result: (f64, f64)) {
@@ -136,7 +136,7 @@ impl CsResults {
 /// Since each totalcs file are the results for a single energy, those files should be parsed into this struct.
 #[derive(Default)]
 pub struct SingleEnergyResults {
-    pub energy: f64,
+    pub energy: HashMap<SingleState, f64>, // Each initial state has a different incident energy.
     pub cross_sections: HashMap<SingleTransition, f64>,
     pub to_ion_cross_sections: HashMap<SingleState, f64>,
 }
