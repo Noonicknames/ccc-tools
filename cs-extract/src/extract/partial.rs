@@ -6,19 +6,21 @@ use std::{
 use diagnostics::{diagnostics::AsyncDiagnostics, error};
 
 use futures::{
-    pin_mut,
+    StreamExt, pin_mut,
     stream::{BoxStream, FuturesUnordered},
-    StreamExt,
 };
-use state_parse::r#async::{compose, AsyncParseSource, AsyncParser, DefaultAsyncParserConfig, SourceInfo};
+use state_parse::r#async::{
+    AsyncParseSource, AsyncParser, DefaultAsyncParserConfig, SourceInfo, compose,
+};
 use tokio_stream::wrappers::ReadDirStream;
 
 use crate::{
     config::{PartialColumn, Units},
     extract::{
-        partial::parsers::{ParseCs, ParseEnergy, ParseIonCs, ParseUnits, PartialCsContext},
         CsResults, TransitionsSet,
-    }, util::FilesSource,
+        partial::parsers::{ParseCs, ParseEnergy, ParseIonCs, ParseUnits, PartialCsContext},
+    },
+    util::FilesSource,
 };
 
 use super::ExtractResultsError;
@@ -51,7 +53,7 @@ pub async fn get_partial_results(
     let parser = {
         let mut parser = AsyncParser::empty(DefaultAsyncParserConfig::new());
         parser.add_section(ParseUnits);
-                parser.add_section(ParseEnergy);
+        parser.add_section(ParseEnergy);
 
         let parse_cs = {
             let mut repeat = compose::RepeatConsume::empty(|_repeat_error| Ok(()));
@@ -59,7 +61,7 @@ pub async fn get_partial_results(
             if !transitions_set.ion.is_empty() {
                 repeat.add_section(ParseIonCs);
             }
-            
+
             if !transitions_set.single.is_empty() {
                 repeat.add_section(ParseCs);
             }
@@ -239,15 +241,21 @@ async fn totalcs_j_files<'a>(
         FilesSource::File(file) => {
             let path = config_dir.as_ref().join(&file);
             futures::stream::once(async move { path }).boxed()
-        },
-        FilesSource::None => {
-            futures::stream::empty().boxed()
         }
+        FilesSource::None => futures::stream::empty().boxed(),
     })
 }
 
 fn is_totalcs_j_file(name: &str) -> bool {
-    if name.starts_with("totalcs_") && name.ends_with("_J") {
+    if name.starts_with("totalcs_")
+        && name.ends_with("_J")
+        && name
+            .trim_start_matches("totalcs_")
+            .trim_end_matches("_J")
+            .parse::<f64>()
+            .map(|_| true)
+            .unwrap_or(false)
+    {
         true
     } else {
         false

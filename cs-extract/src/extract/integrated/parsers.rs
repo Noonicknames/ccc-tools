@@ -573,11 +573,7 @@ where
                                             .with_highlight_auto(state_str, err, LineHighlightTheme::ERROR),
                                     ))
                                 .with_footer(Footer::new(
-                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(), 
-                                    FooterKind::Note
-                                ))
-                                .with_footer(Footer::new(
-                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(), 
+                                    "Example valid line `1.000E+00eV on s2S TICS: s, t-s, +, a  0.000E+00  0.000E+00  0.000E+00  0.000E+00`".to_owned(), 
                                     FooterKind::Note
                                 ))
                             ))
@@ -586,6 +582,11 @@ where
                     return Ok(());
                 }
             };
+
+            if context.extrapolated {
+                _ = columns.next();
+                _ = columns.next();
+            }
 
             let tics_str = match columns.nth(5) {
                 Some(tics_str) => tics_str,
@@ -609,11 +610,7 @@ where
                                     ),
                                 )
                                 .with_footer(Footer::new(
-                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(), 
-                                    FooterKind::Note
-                                ))
-                                .with_footer(Footer::new(
-                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(), 
+                                    "Example valid line `1.000E+00eV on s2S TICS: s, t-s, +, a  0.000E+00  0.000E+00  0.000E+00  0.000E+00`".to_owned(), 
                                     FooterKind::Note
                                 ))
                             )),

@@ -288,7 +288,13 @@ async fn totalcs_files<'a>(
 
 /// Checks if the file is a normal totalcs file.
 pub fn is_totalcs_file(name: &str) -> bool {
-    if name.starts_with("totalcs_") && !name.ends_with("_J") {
+    if name.starts_with("totalcs_")
+        && name
+            .trim_start_matches("totalcs_")
+            .parse::<f64>()
+            .map(|_| true)
+            .unwrap_or(false)
+    {
         true
     } else {
         false
