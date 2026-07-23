@@ -59,7 +59,6 @@ pub async fn get_born_results(
         let mut parser = AsyncParser::empty(DefaultAsyncParserConfig::new());
         parser.add_section(
             ParseEnergyUnits
-                .map_context(|_ctx: &(Arc<IntegratedCsContext>, Arc<AsyncDiagnostics>)| &())
                 .map_output(|output: &mut SingleEnergyResults| &mut output.energy)
                 .map_state(|state: &mut IntegratedCsState| &mut state.units_from),
         );
@@ -165,7 +164,6 @@ pub async fn get_integrated_results(
         let mut parser = AsyncParser::empty(DefaultAsyncParserConfig::new());
         parser.add_section(
             ParseEnergyUnits
-                .map_context(|_ctx: &(Arc<IntegratedCsContext>, Arc<AsyncDiagnostics>)| &())
                 .map_output(|output: &mut SingleEnergyResults| &mut output.energy)
                 .map_state(|state: &mut IntegratedCsState| &mut state.units_from),
         );
@@ -290,7 +288,13 @@ async fn totalcs_files<'a>(
 
 /// Checks if the file is a normal totalcs file.
 pub fn is_totalcs_file(name: &str) -> bool {
-    if name.starts_with("totalcs_") && !name.ends_with("_J") {
+    if name.starts_with("totalcs_")
+        && name
+            .trim_start_matches("totalcs_")
+            .parse::<f64>()
+            .map(|_| true)
+            .unwrap_or(false)
+    {
         true
     } else {
         false

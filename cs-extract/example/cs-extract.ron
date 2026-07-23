@@ -38,6 +38,10 @@
             name: "alpha-latop-3-metastable-smaller-kgrid",
             source: Folder("./alpha-latop-3-metastable-smaller-kgrid"),
         ),
+        (
+            name: "single-metastable",
+            source: Folder("./single-metastable"),
+        ),
     ],
     cs_kind: 
         Partial(

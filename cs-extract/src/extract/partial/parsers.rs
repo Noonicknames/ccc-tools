@@ -140,48 +140,120 @@ where
     }
     fn parse_section<'s>(
         &'s self,
-        _context: &'s Self::Context,
+        (_, diagnostics): &'s Self::Context,
         _state: &'s mut Self::State,
         mut source: std::pin::Pin<&'s mut AsyncParseSource<R>>,
         output: &'s mut Self::Output,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send + 's {
         async move {
-            let line = source.next().await.unwrap().unwrap(); // Should be guaranteed to be valid if it satisfies [`Self::can_start_parse`]
+            loop {
+                let Some(line) = source.peek_or_err().await? else {
+                    break;
+                }; // Should be guaranteed to be valid if it satisfies [`Self::can_start_parse`]
 
-            let energy_str = match line.split_ascii_whitespace().next() {
-                Some(energy_str) => energy_str,
-                None => {
-                    return Err(ExtractResultsError::InvalidLine {
-                        file_path: source
-                            .info()
-                            .file_path
-                            .clone()
-                            .unwrap_or("<unknown>".to_owned()),
-                        line,
-                        line_num: source.current_line_num(),
-                        context: "Expected more columns.".to_owned(),
-                    });
-                }
-            };
+                println!("Line: {}", line);
 
-            let energy = match energy_str.parse() {
-                Ok(energy) => energy,
-                Err(err) => {
-                    return Err(ExtractResultsError::ParseEnergy {
-                        file_path: source
-                            .info()
-                            .file_path
-                            .clone()
-                            .unwrap_or("<unknown>".to_owned()),
-                        failed_energy_str: energy_str.to_owned(),
-                        line,
-                        line_num: source.current_line_num(),
-                        err,
-                    });
-                }
-            };
+                let mut columns = line.split_ascii_whitespace();
 
-            output.energy = energy;
+                let energy_str = match columns.next() {
+                    Some(energy_str) => energy_str,
+                    None => {
+                        break; // Empty line indicates end of this section
+                    }
+                };
+
+                let energy = match energy_str.parse::<f64>() {
+                    Ok(energy) => energy,
+                    Err(err) => {
+                        let energy_str = energy_str.to_owned();
+                        let line = line.to_owned();
+                        diagnostics.write_log_background(
+                            warn!("Invalid energy").with_component(LogComponent::Snippet(
+                                Snippet::empty(source.info().file_path.clone())
+                                    .with_chunk(
+                                        SnippetChunk::empty(source.current_line_num()).with_line(
+                                            SnippetLine::new(line.clone(), SnippetLineKind::Normal)
+                                                .with_highlight_auto(
+                                                    &energy_str,
+                                                    err.to_string(),
+                                                    LineHighlightTheme::ERROR,
+                                                ),
+                                        ),
+                                    )
+                                    .with_footer(Footer::new(
+                                        "Example valid line ` 1.00000E+02 eV on s2S`".to_owned(),
+                                        FooterKind::Note,
+                                    )),
+                            )),
+                        );
+                        source.next().await?;
+                        continue;
+                    }
+                };
+
+                let state_str = match columns.nth(2) {
+                    Some(state_str) => state_str,
+                    None => {
+                        let line = line.clone();
+                        diagnostics.write_log_background(warn!("Expected state").with_component(
+                            LogComponent::Snippet(
+                                Snippet::empty(source.info().file_path.clone()).with_chunk(
+                                    SnippetChunk::empty(source.current_line_num()).with_line(
+                                        SnippetLine::new_with_highlight(
+                                            line.clone(),
+                                            SnippetLineKind::Normal,
+                                            Some(LineHighlight::new(
+                                                line.len(),
+                                                2,
+                                                "Expected \"on <state>\" to follow energy".to_owned(),
+                                                LineHighlightTheme::INFO,
+                                            )),
+                                        ),
+                                    ),
+                                ).with_footer(Footer::new(
+                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(), 
+                                    FooterKind::Note
+                                )),
+                            ),
+                        ));
+                        source.next().await?;
+                        continue;
+                    }
+                };
+
+                let state = match SingleState::from_str(state_str) {
+                    Ok(state) => state,
+                    Err(err) => {
+                        let energy_str = energy_str.to_owned();
+                        let line = line.clone();
+                        diagnostics.write_log_background(
+                            warn!("Invalid state").with_component(LogComponent::Snippet(
+                                Snippet::empty(source.info().file_path.clone())
+                                    .with_chunk(
+                                        SnippetChunk::empty(source.current_line_num()).with_line(
+                                            SnippetLine::new(line, SnippetLineKind::Normal)
+                                                .with_highlight_auto(
+                                                    &energy_str,
+                                                    err.to_string(),
+                                                    LineHighlightTheme::ERROR,
+                                                ),
+                                        ),
+                                    )
+                                    .with_footer(Footer::new(
+                                        "Example valid line ` 1.00000E+02 eV on s2S`".to_owned(),
+                                        FooterKind::Note,
+                                    )),
+                            )),
+                        );
+                        source.next().await?;
+                        continue;
+                    }
+                };
+
+                output.energy.insert(state, energy);
+
+                source.next().await?;
+            }
             Ok(())
         }
     }
@@ -221,6 +293,7 @@ where
         _state: &mut Self::State,
         line: &str,
     ) -> bool {
+
         // Example line
         //   0  9.539E+01eV on t2P TNBCS,+extra, spin asymmetry:  3.243E-01  1.522E+01 -7.574E-02
         // Must start with partial wave number
@@ -461,11 +534,7 @@ where
                 // Example line
                 //  J   trans    cross section    extrap      PCS(V)       PCS(T) S=0   PCS(T) S=1   energy     ovlp  ip
                 //   0 s2S <-s2S  3.85861E-17  1.23754E-16  1.22769E-16  3.85861E-17  0.00000E+00 -1.84830E+00  1.0000 0
-                let line = match source
-                    .next()
-                    .await?
-                    .filter(has_header)
-                {
+                let line = match source.next().await?.filter(has_header) {
                     Some(line) => line,
                     None => break,
                 };
