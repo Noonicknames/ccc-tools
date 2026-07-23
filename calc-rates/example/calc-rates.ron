@@ -211,7 +211,7 @@
         ),
     ],
     temperature_units: Kelvin,
-    output_integrands: false,
+    output_integrands: true,
     output_folder: "./calc-rates-out",
     collision_rate_units: Strength,
 )

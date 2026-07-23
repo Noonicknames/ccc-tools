@@ -4,7 +4,7 @@ use std::{
 };
 
 use diagnostics::{
-    diagnostics::{AsyncDiagnostics, Diagnostics},
+    diagnostics::AsyncDiagnostics,
     error,
 };
 use futures::{

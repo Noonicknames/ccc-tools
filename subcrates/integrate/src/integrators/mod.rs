@@ -8,8 +8,9 @@ mod gauss;
 pub mod interpolation;
 mod monotone_cubic;
 mod natural_cubic;
+mod akima;
 
-pub use self::{gauss::*, monotone_cubic::*, natural_cubic::*};
+pub use self::{gauss::*, monotone_cubic::*, natural_cubic::*, akima::*};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
@@ -17,6 +18,7 @@ pub enum IntegrationKind {
     #[default]
     MonotoneCubic,
     NaturalCubic,
+    AkimaCubic,
     AutoGauss,
     Gauss,
 }

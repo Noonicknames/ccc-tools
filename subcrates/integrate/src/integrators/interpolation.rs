@@ -117,13 +117,14 @@ pub trait Interpolation: Send + Sync {
 
             let y = num - c;
             let t = sum + y;
-            c = (t - sum) - y;
+            // c = (t - sum) - y; // Kahan Summation Compensator
 
             sum = t;
         }
 
         sum
     }
+    
     fn integral(&self, mut epsilon: f64) -> f64 {
         let interpolate_range = self.interpolate_range();
 
@@ -168,7 +169,7 @@ pub trait Interpolation: Send + Sync {
 
         // Enforce a minimum error so it doesn't loop forever
         epsilon = epsilon.max(
-            32.0 * max_abs_y * (interpolate_range.end() - interpolate_range.start()) * f64::EPSILON,
+            128.0 * max_abs_y * (interpolate_range.end() - interpolate_range.start()) * f64::EPSILON,
         );
 
         loop {

@@ -17,8 +17,7 @@ use diagnostics::{
 use file_util::ensure_folder_exists;
 use futures::stream::FuturesUnordered;
 use integrate::integrators::{
-    GaussIntegrator, IntegrationKind, Integrator, MonotoneCubicIntegrator, NaturalCubicIntegrator,
-    SubIntegrators, interpolation::Interpolation,
+    AkimaCubicIntegrator, GaussIntegrator, IntegrationKind, Integrator, MonotoneCubicIntegrator, NaturalCubicIntegrator, SubIntegrators, interpolation::Interpolation,
 };
 use la::{BlasLib, LapackeLib};
 use ordered_float::OrderedFloat;
@@ -232,6 +231,11 @@ async fn process_result_set(
                 Box::new(MonotoneCubicIntegrator::new(&energy_vec[range]))
                     as Box<dyn Integrator + Sync + Send>,
             ),
+            (_, IntegrationKind::AkimaCubic) => (
+                range.clone(),
+                Box::new(AkimaCubicIntegrator::new(&energy_vec[range]))
+                    as Box<dyn Integrator + Sync + Send>,
+            ),
             (_, IntegrationKind::AutoGauss) => {
                 let integrand = energy_vec
                     .iter()
@@ -257,11 +261,11 @@ async fn process_result_set(
             ),
             (None, IntegrationKind::NaturalCubic) => {
                 diagnostics.write_log_background(warn!(
-                    "Falling back to monotone cubic since LAPACKE was not available."
+                    "Falling back to akima cubic since LAPACKE was not available."
                 ));
                 (
                     range.clone(),
-                    Box::new(MonotoneCubicIntegrator::new(&energy_vec[range]))
+                    Box::new(AkimaCubicIntegrator::new(&energy_vec[range]))
                         as Box<dyn Integrator + Sync + Send>,
                 )
             }
@@ -368,11 +372,11 @@ async fn output_rates_data(
                                 *threshold_energy * threshold_energy_units.to_hartree_factor();
                             move |x: &[f64], y: &mut [f64]| {
                                 x.iter().zip(y.iter_mut()).for_each(|(&x, y)| {
-                                    if x < threshold_energy {
-                                        *y = 0.0;
-                                    } else {
-                                        *y = *y * x * (-(x - threshold_energy) * recip_temp).exp()
-                                    }
+                                    // if x < threshold_energy {
+                                    //     *y = 0.0;
+                                    // } else {
+                                    *y = *y * x * (-(x - threshold_energy) * recip_temp).exp()
+                                    // }
                                 });
                             }
                         },

@@ -1,0 +1,29 @@
+(
+    result_sets: [
+        (
+            name: "test",
+            source: "./test_out/f_n-14/ics.s2P.s2S",
+            grid: [
+                MonotoneCubic(".."),
+            ],
+            energy_units: Auto,
+            cs_units: Auto,
+            calc_strength_ctx: Some((
+                degeneracy: 1,
+                threshold_energy: 9.30390,
+                threshold_energy_units: ElectronVolt,
+            )),
+        ),
+    ],
+    temperatures: [
+        LogSequence(
+            start: 1e+3,
+            end: 1e+6,
+            n: 40,
+        ),
+    ],
+    temperature_units: Kelvin,
+    output_integrands: true,
+    output_folder: "./calc-rates-out",
+    collision_rate_units: Strength,
+)

@@ -7,7 +7,8 @@ use integrate::integrators::IntegrationKind;
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    CalcStrengthContext, CollisionRateOrStrengthUnits, CsUnitsOrAuto, EnergyUnitsOrAuto, RangeOrCountSerde, TemperatureUnits
+    CalcStrengthContext, CollisionRateOrStrengthUnits, CsUnitsOrAuto, EnergyUnitsOrAuto,
+    RangeOrCountSerde, TemperatureUnits,
 };
 
 /// Integration grid points.
@@ -17,6 +18,7 @@ use crate::config::{
 pub enum IntegrationGridPoints {
     MonotoneCubic(RangeOrCountSerde<usize>),
     NaturalCubic(RangeOrCountSerde<usize>),
+    AkimaCubic(RangeOrCountSerde<usize>),
     AutoGauss(RangeOrCountSerde<usize>),
     Gauss(RangeOrCountSerde<usize>),
 
@@ -31,6 +33,7 @@ impl IntegrationGridPoints {
         match self {
             Self::MonotoneCubic(..) => IntegrationKind::MonotoneCubic,
             Self::AutoGauss(..) => IntegrationKind::AutoGauss,
+            Self::AkimaCubic(..) => IntegrationKind::AkimaCubic,
             Self::Gauss(..) => IntegrationKind::Gauss,
             Self::NaturalCubic(..) => IntegrationKind::NaturalCubic,
             Self::Repeat(inner, ..) => inner.kind(),
@@ -62,6 +65,7 @@ impl IntegrationGridPoints {
             IntegrationGridPoints::AutoGauss(range)
             | IntegrationGridPoints::NaturalCubic(range)
             | IntegrationGridPoints::MonotoneCubic(range)
+            | IntegrationGridPoints::AkimaCubic(range)
             | IntegrationGridPoints::Gauss(range) => {
                 return Some(match range {
                     &RangeOrCountSerde::Count(n) => {
