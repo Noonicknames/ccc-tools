@@ -291,6 +291,7 @@ impl NodeRef {
         }
         depth
     }
+    #[allow(unused)]
     pub fn is_left_child<T>(&self, tree: &NodeTree<T>) -> Option<bool> {
         if let Some(parent) = self.parent(tree) {
             Some(parent.left_child(tree).unwrap().eq(self))
@@ -298,6 +299,7 @@ impl NodeRef {
             None
         }
     }
+    #[allow(unused)]
     pub fn has_parent<T>(&self, tree: &NodeTree<T>) -> bool {
         tree.data[self.idx].parent.is_some()
     }
@@ -307,6 +309,7 @@ impl NodeRef {
     pub fn value<'t, T>(&self, tree: &'t NodeTree<T>) -> &'t T {
         &self.inner(tree).value
     }
+    #[allow(unused)]
     pub fn value_mut<'t, T>(&self, tree: &'t mut NodeTree<T>) -> &'t mut T {
         &mut self.inner_mut(tree).value
     }
@@ -335,6 +338,8 @@ impl NodeRef {
             .replace(new_val)
             .map(|(l, r)| (NodeRef { idx: l }, NodeRef { idx: r }))
     }
+
+    #[allow(unused)]
     pub fn children<T>(&self, tree: &NodeTree<T>) -> Option<(NodeRef, NodeRef)> {
         self.inner(tree)
             .children
