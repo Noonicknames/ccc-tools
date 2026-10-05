@@ -130,7 +130,7 @@ where
                                             .with_highlight_auto(energy_str, err.to_string(), LineHighlightTheme::ERROR),
                                     ))
                                 .with_footer(Footer::new(
-                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(), 
+                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(),
                                     FooterKind::Note
                                 ))
                             ))
@@ -156,7 +156,7 @@ where
                                     ),
                                 ),
                             ).with_footer(Footer::new(
-                                "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(), 
+                                "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(),
                                 FooterKind::Note
                             )),
                         ),
@@ -176,7 +176,7 @@ where
                                             .with_highlight_auto(energy_str, err, LineHighlightTheme::ERROR),
                                     ))
                                 .with_footer(Footer::new(
-                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(), 
+                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(),
                                     FooterKind::Note
                                 ))
                             ))
@@ -195,7 +195,7 @@ where
                                             .with_highlight_auto(state_str, "Duplicate initial state".to_owned(), LineHighlightTheme::ERROR),
                                     ))
                                 .with_footer(Footer::new(
-                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(), 
+                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(),
                                     FooterKind::Note
                                 ))
                             ))
@@ -287,6 +287,12 @@ where
             loop {
                 match source.peek().await {
                     Ok(Some(line)) => {
+                        if line.starts_with(
+                            "  transition   BornPCS        BornICS      last PCS(V)    last PCS(T) canstop",
+                        ) {
+                            source.next().await.unwrap();
+                            continue;
+                        }
                         let Some(transition) = line.slice_columns(0..=1) else {
                             break;
                         };
@@ -409,11 +415,11 @@ where
                 _ = columns.next();
 
                 let Some(cs_str) = columns.next() else {
-                    diagnostics.write_log_background(error!("{}", ExtractResultsError::InvalidLine { 
+                    diagnostics.write_log_background(error!("{}", ExtractResultsError::InvalidLine {
                         file_path: source.info().file_path.clone().unwrap_or_else(|| "<unknown>".to_owned()),
                         line: line.to_owned(),
                         line_num: source.current_line_num(),
-                        context: "Extracting cross-section, line should look like `s2S <-s2S    1.00539E-16    1.00549E-16    1.00000E+00    1.00000E+00 -1.848E+00  1.695E+01`".to_owned(), 
+                        context: "Extracting cross-section, line should look like `s2S <-s2S    1.00539E-16    1.00549E-16    1.00000E+00    1.00000E+00 -1.848E+00  1.695E+01`".to_owned(),
                     }));
                     continue;
                 };
@@ -547,11 +553,11 @@ where
                                     ),
                                 )
                                 .with_footer(Footer::new(
-                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(), 
+                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(),
                                     FooterKind::Note
                                 ))
                                 .with_footer(Footer::new(
-                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(), 
+                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(),
                                     FooterKind::Note
                                 ))
                             )),
@@ -573,7 +579,7 @@ where
                                             .with_highlight_auto(state_str, err, LineHighlightTheme::ERROR),
                                     ))
                                 .with_footer(Footer::new(
-                                    "Example valid line `1.000E+00eV on s2S TICS: s, t-s, +, a  0.000E+00  0.000E+00  0.000E+00  0.000E+00`".to_owned(), 
+                                    "Example valid line `1.000E+00eV on s2S TICS: s, t-s, +, a  0.000E+00  0.000E+00  0.000E+00  0.000E+00`".to_owned(),
                                     FooterKind::Note
                                 ))
                             ))
@@ -610,7 +616,7 @@ where
                                     ),
                                 )
                                 .with_footer(Footer::new(
-                                    "Example valid line `1.000E+00eV on s2S TICS: s, t-s, +, a  0.000E+00  0.000E+00  0.000E+00  0.000E+00`".to_owned(), 
+                                    "Example valid line `1.000E+00eV on s2S TICS: s, t-s, +, a  0.000E+00  0.000E+00  0.000E+00  0.000E+00`".to_owned(),
                                     FooterKind::Note
                                 ))
                             )),
@@ -633,11 +639,11 @@ where
                                     ),
                                 )
                                 .with_footer(Footer::new(
-                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(), 
+                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(),
                                     FooterKind::Note
                                 ))
                                 .with_footer(Footer::new(
-                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(), 
+                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(),
                                     FooterKind::Note
                                 ))
                             )),
@@ -868,11 +874,11 @@ where
                 }
 
                 let Some(cs_str) = columns.next() else {
-                    diagnostics.write_log_background(error!("{}", ExtractResultsError::InvalidLine { 
+                    diagnostics.write_log_background(error!("{}", ExtractResultsError::InvalidLine {
                         file_path: source.info().file_path.clone().unwrap_or_else(|| "<unknown>".to_owned()),
                         line: line.to_owned(),
                         line_num: source.current_line_num(),
-                        context: "Extracting cross-section, line should look like `s2S <-s2S    1.00539E-16    1.00549E-16    1.00000E+00    1.00000E+00 -1.848E+00  1.695E+01`".to_owned(), 
+                        context: "Extracting cross-section, line should look like `s2S <-s2S    1.00539E-16    1.00549E-16    1.00000E+00    1.00000E+00 -1.848E+00  1.695E+01`".to_owned(),
                     }));
                     continue;
                 };

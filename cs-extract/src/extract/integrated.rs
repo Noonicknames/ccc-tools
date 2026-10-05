@@ -3,10 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use diagnostics::{
-    diagnostics::AsyncDiagnostics,
-    error,
-};
+use diagnostics::{diagnostics::AsyncDiagnostics, error};
 use futures::{
     StreamExt, pin_mut,
     stream::{BoxStream, FuturesUnordered},
