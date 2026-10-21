@@ -917,8 +917,10 @@ where
 
                 cs = cs * Units::conversion_factor(state.units_from.unwrap(), context.units);
 
-                output.cross_sections.insert(transition.clone(), cs);
-                extracted_count += 1;
+                if context.transitions_set.single.contains(&transition) {
+                    output.cross_sections.insert(transition.clone(), cs);
+                    extracted_count += 1;
+                }
 
                 if context.manual_tics {
                     if context.transitions_set.ion.contains(&transition.from) {
