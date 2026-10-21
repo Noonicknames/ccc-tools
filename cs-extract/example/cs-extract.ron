@@ -11,7 +11,7 @@
             cs_kind: Some(
                 Partial (
                     column: CrossSection,
-                    partial_wave: 0
+                    partial_wave: 0,
                 )
             ),
         ),
@@ -37,6 +37,15 @@
         (
             name: "single-2-manual-tics",
             source: Folder("./single-2"),
+            manual_tics: Some(true),
+        ),
+        (
+            name: "single-3",
+            source: Folders(["./single-3/singlets", "./single-3/triplets"]),
+        ),
+        (
+            name: "single-3-manual-tics",
+            source: Folders(["./single-3/singlets", "./single-3/triplets"]),
             manual_tics: Some(true),
         ),
         (

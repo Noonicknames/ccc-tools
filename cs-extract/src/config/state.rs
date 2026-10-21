@@ -151,7 +151,8 @@ impl SingleState {
         }
 
         match l {
-            b'S' | b'P' | b'D' | b'F' | b'G' | b'H' | b'I' | b'J' => (),
+            b'S' | b'P' | b'D' | b'F' | b'G' | b'H' | b'I' | b'J' | b'K' | b'L' | b'M' | b'N'
+            | b'O' | b'P' => (),
             _ => return false,
         }
 

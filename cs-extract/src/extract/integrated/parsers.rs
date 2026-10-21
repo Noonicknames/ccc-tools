@@ -762,9 +762,11 @@ where
                 match source.peek().await {
                     Ok(Some(line)) => {
                         let Some(transition) = line.slice_columns(0..=1) else {
+                            println!("#21Broke at: {}", line);
                             break;
                         };
                         if !SingleTransition::is_valid_transition_str(transition) {
+                            println!("#Broke at: {}", line);
                             break;
                         }
                     }
@@ -785,6 +787,8 @@ where
                         });
                     }
                 };
+
+                println!("line: {}", line);
 
                 let mut columns = line.split_ascii_whitespace();
 
@@ -966,6 +970,7 @@ where
 
                 // Each file should only have one result for each transition.
                 if !context.manual_tics && extracted_count >= context.transitions_set.single.len() {
+                    println!("Broke at: {}", line);
                     break;
                 }
             }

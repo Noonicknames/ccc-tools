@@ -171,11 +171,13 @@ pub async fn get_integrated_results(
         let parse_cs = {
             let mut repeat = compose::RepeatConsume::empty(|_repeat_err| Ok(()));
 
-            if !transitions_set.ion.is_empty() {
+            if !transitions_set.ion.is_empty() && !manual_tics {
                 repeat.add_section(ParseIonCs);
             }
 
-            if !transitions_set.single.is_empty() {
+            if !transitions_set.single.is_empty()
+                || (!transitions_set.ion.is_empty() && manual_tics)
+            {
                 repeat.add_section(ParseSingleCs);
             }
 
