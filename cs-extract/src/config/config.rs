@@ -16,6 +16,8 @@ pub struct ConfigSerde {
     #[serde(default)]
     pub add_threshold_point: bool,
     #[serde(default)]
+    pub manual_tics: bool,
+    #[serde(default)]
     pub units: Units,
 
     #[serde(default = "default_output_folder")]
@@ -35,6 +37,7 @@ impl ConfigSerde {
                     self.units,
                     self.overwrite,
                     self.add_threshold_point,
+                    self.manual_tics,
                     &transitions,
                 )
             })
@@ -71,6 +74,8 @@ pub struct ResultSetSerde {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub add_threshold_point: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub manual_tics: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub transitions: Option<Vec<Transition>>,
 }
 
@@ -81,6 +86,7 @@ impl ResultSetSerde {
         units: Units,
         overwrite: bool,
         add_threshold_point: bool,
+        manual_tics: bool,
         transitions: &Arc<TransitionsSet>,
     ) -> ResultSet {
         ResultSet {
@@ -90,6 +96,7 @@ impl ResultSetSerde {
             units: self.units.unwrap_or(units),
             overwrite: self.overwrite.unwrap_or(overwrite),
             add_threshold_point: self.add_threshold_point.unwrap_or(add_threshold_point),
+            manual_tics: self.manual_tics.unwrap_or(manual_tics),
             transitions: self
                 .transitions
                 .map(|transitions| Arc::new(transitions.into_iter().collect::<TransitionsSet>()))
@@ -106,6 +113,7 @@ pub struct ResultSet {
     pub units: Units,
     pub overwrite: bool,
     pub add_threshold_point: bool,
+    pub manual_tics: bool,
     pub transitions: Arc<TransitionsSet>,
 }
 
@@ -256,6 +264,7 @@ impl ConfigSerde {
             ],
             units: Units::Atomic,
             add_threshold_point: true,
+            manual_tics: false,
             overwrite: false,
         }
     }

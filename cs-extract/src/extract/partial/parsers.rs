@@ -151,8 +151,6 @@ where
                     break;
                 }; // Should be guaranteed to be valid if it satisfies [`Self::can_start_parse`]
 
-                println!("Line: {}", line);
-
                 let mut columns = line.split_ascii_whitespace();
 
                 let energy_str = match columns.next() {
@@ -211,7 +209,7 @@ where
                                         ),
                                     ),
                                 ).with_footer(Footer::new(
-                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(), 
+                                    "Example valid line `   20 566   2 Units: a0^2     electron - B II    1.0000E+02 eV on s2S  9.5379E+01 eV on t2P`".to_owned(),
                                     FooterKind::Note
                                 )),
                             ),
@@ -293,7 +291,6 @@ where
         _state: &mut Self::State,
         line: &str,
     ) -> bool {
-
         // Example line
         //   0  9.539E+01eV on t2P TNBCS,+extra, spin asymmetry:  3.243E-01  1.522E+01 -7.574E-02
         // Must start with partial wave number
@@ -366,11 +363,11 @@ where
                                             .with_highlight_auto(state_str, err, LineHighlightTheme::ERROR),
                                     ))
                                 .with_footer(Footer::new(
-                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(), 
+                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(),
                                     FooterKind::Note
                                 ))
                                 .with_footer(Footer::new(
-                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(), 
+                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(),
                                     FooterKind::Note
                                 ))
                             ))
@@ -402,11 +399,11 @@ where
                                     ),
                                 )
                                 .with_footer(Footer::new(
-                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(), 
+                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(),
                                     FooterKind::Note
                                 ))
                                 .with_footer(Footer::new(
-                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(), 
+                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(),
                                     FooterKind::Note
                                 ))
                             )),
@@ -429,11 +426,11 @@ where
                                     ),
                                 )
                                 .with_footer(Footer::new(
-                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(), 
+                                    "Example valid line `  0 1.000E+02eV on s2S  TICS(0,0): 2.19E-02 = 5.65E-03 + 5.90E-03 + 8.00E-03 + 1.82E-03 + 4.94E-04 + 4.28E-05`".to_owned(),
                                     FooterKind::Note
                                 ))
                                 .with_footer(Footer::new(
-                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(), 
+                                    "The program searches for a line starting with the specified partial wave number and TICS in the 5th column".to_owned(),
                                     FooterKind::Note
                                 ))
                             )),
@@ -583,11 +580,11 @@ where
                 }
 
                 let Some(cs_str) = columns.next() else {
-                    diagnostics.write_log_background(error!("{}", ExtractResultsError::InvalidLine { 
+                    diagnostics.write_log_background(error!("{}", ExtractResultsError::InvalidLine {
                         file_path: source.info().file_path.clone().unwrap_or_else(|| "<unknown>".to_owned()),
                         line: line.to_owned(),
                         line_num: source.current_line_num(),
-                        context: "Extracting cross-section, line should look like '  0 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  1.0000 0'".to_owned(), 
+                        context: "Extracting cross-section, line should look like '  0 S3P <-s2S  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00 -1.21827E-01  1.0000 0'".to_owned(),
                     }));
                     continue;
                 };

@@ -24,6 +24,9 @@ pub struct IntegratedCsContext {
     pub units: Units,
     pub transitions_set: Arc<TransitionsSet>,
 
+    /// Whether to manually sum the ionisation cross sections
+    pub manual_tics: bool,
+
     /// Parameter used when extracting close-coupling cross sections, unused otherwise.
     pub extrapolated: bool,
     /// Parameter used when extracting born cross sections, unused otherwise.
@@ -238,8 +241,8 @@ where
 
     fn can_start_parse(
         &self,
-        context: &Self::Context,
-        state: &mut Self::State,
+        _context: &Self::Context,
+        _state: &mut Self::State,
         line: &str,
     ) -> bool {
         // Example line to look for
@@ -407,12 +410,17 @@ where
                 transition.to.n.set_order(order);
 
                 // Only process transitions we are interested in.
-                if !context.transitions_set.single.contains(&transition) {
+                if !(context.transitions_set.single.contains(&transition)
+                    || (context.manual_tics
+                        && context.transitions_set.ion.contains(&transition.from)))
+                {
                     continue;
                 }
 
                 // Integrated is after next column
-                _ = columns.next();
+                if !context.partial {
+                    _ = columns.next();
+                }
 
                 let Some(cs_str) = columns.next() else {
                     diagnostics.write_log_background(error!("{}", ExtractResultsError::InvalidLine {
@@ -445,7 +453,7 @@ where
 
                 cs = cs * Units::conversion_factor(state.units_from.unwrap(), context.units);
 
-                output.cross_sections.insert(transition, cs);
+                output.cross_sections.insert(transition.clone(), cs);
                 extracted_count += 1;
 
                 // Each file should only have one result for each transition.
@@ -501,7 +509,9 @@ where
         async move {
             // Example line to look for
             // 1.000E+00eV on s2S TICS: s, t-s, +, a  0.000E+00  0.000E+00  0.000E+00  0.000E+00
-
+            if context.manual_tics {
+                return Ok(());
+            }
             let mut source = source.as_mut();
 
             // Find line containing TICS
@@ -864,7 +874,10 @@ where
                 transition.to.n.set_order(order);
 
                 // Only process transitions we are interested in.
-                if !context.transitions_set.single.contains(&transition) {
+                if !(context.transitions_set.single.contains(&transition)
+                    || (context.manual_tics
+                        && context.transitions_set.ion.contains(&transition.from)))
+                {
                     continue;
                 }
 
@@ -904,11 +917,53 @@ where
 
                 cs = cs * Units::conversion_factor(state.units_from.unwrap(), context.units);
 
-                output.cross_sections.insert(transition, cs);
+                output.cross_sections.insert(transition.clone(), cs);
                 extracted_count += 1;
 
+                if context.manual_tics {
+                    if context.transitions_set.ion.contains(&transition.from) {
+                        if !context.extrapolated {
+                            _ = columns.next();
+                        }
+                        _ = columns.next();
+                        _ = columns.next();
+
+                        let Some(energy_str) = columns.next() else {
+                            diagnostics.write_log_background(error!("{}", ExtractResultsError::InvalidLine {
+                                file_path: source.info().file_path.clone().unwrap_or_else(|| "<unknown>".to_owned()),
+                                line: line.to_owned(),
+                                line_num: source.current_line_num(),
+                                context: "Extracting state energy, line should look like `s2S <-s2S    1.00539E-16    1.00549E-16    1.00000E+00    1.00000E+00 -1.848E+00  1.695E+01`".to_owned(),
+                            }));
+                            continue;
+                        };
+
+                        let energy = match energy_str.parse::<f64>() {
+                            Ok(energy) => energy,
+                            Err(err) => {
+                                diagnostics.write_log_background(invalid_crosssection_log(
+                                    source.info().file_path.clone(),
+                                    source.current_line_num(),
+                                    line.to_owned(),
+                                    cs_str,
+                                    err,
+                                ));
+
+                                continue;
+                            }
+                        };
+                        if energy > 0.0 {
+                            let tics = output
+                                .to_ion_cross_sections
+                                .entry(transition.from)
+                                .or_insert(0.0);
+                            *tics += cs;
+                        }
+                    }
+                }
+
                 // Each file should only have one result for each transition.
-                if extracted_count >= context.transitions_set.single.len() {
+                if !context.manual_tics && extracted_count >= context.transitions_set.single.len() {
                     break;
                 }
             }

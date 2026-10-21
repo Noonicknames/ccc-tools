@@ -9,9 +9,9 @@
             source: Folder("./bound_states_3"),
             // Individually specified is possible.
             cs_kind: Some(
-                Partial ( 
-                    column: CrossSection, 
-                    partial_wave: 0 
+                Partial (
+                    column: CrossSection,
+                    partial_wave: 0
                 )
             ),
         ),
@@ -31,6 +31,15 @@
             source: Folder("./single"),
         ),
         (
+            name: "single-2",
+            source: Folder("./single-2"),
+        ),
+        (
+            name: "single-2-manual-tics",
+            source: Folder("./single-2"),
+            manual_tics: Some(true),
+        ),
+        (
             name: "full_run_halves",
             source: Folders(["./lower_half_full_run", "./upper_half_full_run"]),
         ),
@@ -43,14 +52,14 @@
             source: Folder("./single-metastable"),
         ),
     ],
-    cs_kind: 
-        Partial(
-            column: CrossSection,
-            partial_wave: 0,
-        ),
-        // Integrated (
-        //     extrapolated: true,
+    cs_kind:
+        // Partial(
+        //     column: CrossSection,
+        //     partial_wave: 0,
         // ),
+        Integrated (
+            extrapolated: true,
+        ),
     transitions: [
         "ion<-s2S",
         "ion<-t2P",
@@ -68,5 +77,6 @@
     output_folder: "./test_out",
     units: Atomic,
     overwrite: true,
+    manual_tics: false,
     add_threshold_point: true,
 )

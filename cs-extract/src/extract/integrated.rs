@@ -49,6 +49,7 @@ pub async fn get_born_results(
         partial,
         extrapolated: Default::default(), // Unused for extracting born cross sections.
         units,
+        manual_tics: false,
         transitions_set: Arc::clone(transitions_set),
     });
 
@@ -142,6 +143,7 @@ pub async fn get_integrated_results(
     transitions_set: &Arc<TransitionsSet>,
     units: Units,
     extrapolated: bool,
+    manual_tics: bool,
     diagnostics: &Arc<AsyncDiagnostics>,
 ) -> Result<CsResults, ExtractResultsError> {
     let totalcs_files = totalcs_files(config_dir, &source, diagnostics).await;
@@ -154,6 +156,7 @@ pub async fn get_integrated_results(
         partial: Default::default(),
         extrapolated,
         units,
+        manual_tics,
         transitions_set: Arc::clone(transitions_set),
     });
 

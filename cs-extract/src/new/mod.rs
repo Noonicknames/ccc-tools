@@ -49,7 +49,7 @@ pub async fn cmd_new(
                             return Err(NewCmdError::IoError {
                                 err,
                                 file: Some(path.to_owned()),
-                            })
+                            });
                         }
                     }
                 }

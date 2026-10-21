@@ -417,6 +417,7 @@ async fn prepare_single_result_set(
         units,
         overwrite,
         add_threshold_point,
+        manual_tics,
         transitions,
     } = set;
 
@@ -438,6 +439,7 @@ async fn prepare_single_result_set(
             cs_kind.clone(),
             units,
             add_threshold_point,
+            manual_tics,
             diagnostics,
         )
         .await
@@ -547,17 +549,21 @@ async fn get_results(
     cs_kind: CsKind,
     units: Units,
     add_threshold_point: bool,
+    manual_tics: bool,
     diagnostics: &Arc<AsyncDiagnostics>,
 ) -> Result<CsResults, ExtractResultsError> {
     let mut results = match cs_kind {
-        CsKind::Born { partial } => get_born_results(
-            root_dir.as_ref(),
-            source,
-            transitions_set,
-            units,
-            partial,
-            diagnostics,
-        ).await,
+        CsKind::Born { partial } => {
+            get_born_results(
+                root_dir.as_ref(),
+                source,
+                transitions_set,
+                units,
+                partial,
+                diagnostics,
+            )
+            .await
+        }
         CsKind::Integrated { extrapolated } => {
             get_integrated_results(
                 root_dir.as_ref(),
@@ -565,6 +571,7 @@ async fn get_results(
                 transitions_set,
                 units,
                 extrapolated,
+                manual_tics,
                 diagnostics,
             )
             .await
